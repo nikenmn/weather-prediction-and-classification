@@ -50,8 +50,8 @@
                class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'input' else 'hover:bg-gray-600' }}">
               Masukkan Data Cuaca
             </a>
-            <a href="{{ url_for('prediksi') }}#cuaca7hari"
-               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-600' }}">
+            <a href="{{ url_for('lihat_kondisi_cuaca') }}"
+              class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-600' }}">
               Lihat Kondisi Cuaca
             </a>
             <a href="{{ url_for('unduh') }}"

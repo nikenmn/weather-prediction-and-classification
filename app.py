@@ -355,6 +355,10 @@ def generate_7day_prediction():
 
     return hasil
 
+@app.route('/lihat-cuaca')
+def lihat_kondisi_cuaca():
+    cuaca_harian = generate_7day_prediction()
+    return render_template('lihatCuaca.html', cuaca_harian=cuaca_harian, current_page='prediksi')
 
 
 

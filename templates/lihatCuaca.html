@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lihat Kondisi Cuaca</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .accordion-icon { transition: transform 0.3s ease; }
+    .accordion-toggle.open .accordion-icon { transform: rotate(180deg); }
+  </style>
+  <script>
+    function toggleAccordion(btn) {
+      btn.classList.toggle('open');
+      const content = btn.nextElementSibling;
+      content.classList.toggle('hidden');
+    }
+  </script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Navbar -->
+  <header class="fixed top-0 left-0 w-full bg-[#030E17] text-white px-6 py-3 z-50 shadow-md">
+    <div class="flex items-center justify-between w-full">
+      <div class="flex items-center space-x-2">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" class="w-10 h-10 object-contain" />
+        <span class="font-bold italic text-white text-base">Jaga Jeruk</span>
+      </div>
+      <div class="flex items-center space-x-4">
+        <nav class="hidden sm:flex space-x-6 text-sm font-normal tracking-tight">
+          <a href="{{ url_for('input_data') }}" class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'input' else 'hover:bg-gray-600' }}">
+            Masukkan Data Cuaca
+          </a>
+          <a href="{{ url_for('prediksi') }}#cuaca7hari" class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-600' }}">
+            Lihat Kondisi Cuaca
+          </a>
+          <a href="{{ url_for('unduh') }}" class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'unduh' else 'hover:bg-gray-600' }}">
+            Unduh Kondisi Cuaca
+          </a>
+        </nav>
+        <a href="{{ url_for('index') }}" class="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition">
+          <i class="fas fa-home text-white text-lg"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- spacing -->
+  <div class="pt-1"></div>
+
+  <!-- Accordion Section -->
+<section id="cuaca7hari" class="bg-white rounded-t-[60px] rounded-b-[60px] pt-6 mt-20 mb-10 pb-8 mx-auto max-w-6xl shadow-md">
+    <div class="max-w-6xl mx-auto px-4 sm:px-8 lg:px-10">
+      <h2 class="text-center text-2xl sm:text-3xl font-semibold italic text-gray-900 mb-8 border-b border-gray-300 pb-4">
+        Kondisi Cuaca 7 Hari
+      </h2>
+  
+      {% for data in cuaca_harian %}
+      <div class="rounded-xl border border-gray-300 mb-6 overflow-hidden shadow transition duration-300 bg-white">
+        <!-- BUTTON -->
+        <button onclick="toggleAccordion(this)" class="flex justify-between items-center w-full px-6 py-4 bg-white hover:bg-gray-50 accordion-toggle">
+          <!-- LEFT -->
+          <div class="flex items-center gap-4 text-sm text-gray-700">
+            <div class="flex flex-col text-left leading-tight">
+              <p class="font-bold text-base text-gray-900">{{ data.hari }}</p>
+              <p class="text-gray-500 text-sm">{{ data.tanggal }}</p>
+            </div>
+            <img src="{{ url_for('static', filename='img/color-logo.png') }}" class="w-10 h-7" alt="ikon cuaca" />
+          </div>
+  
+          <!-- CENTER -->
+          <div class="flex-1 flex justify-center gap-6 text-sm text-gray-700">
+            <span class="flex items-center gap-1">
+              <img src="{{ url_for('static', filename='img/icons/rh-icon.png') }}" class="w-4 h-4" /> {{ data.RH }}%
+            </span>
+            <span class="flex items-center gap-1">
+              <img src="{{ url_for('static', filename='img/icons/tavg-icon.png') }}" class="w-6 h-4" /> {{ data.TAVG }}°C
+            </span>
+            <span class="flex items-center gap-1">
+              <img src="{{ url_for('static', filename='img/icons/rr-icon.png') }}" class="w-6 h-4" /> {{ data.RR }} mm
+            </span>
+            <span class="flex items-center gap-1">
+              <img src="{{ url_for('static', filename='img/icons/ss-icon.png') }}" class="w-6 h-4" /> {{ data.SS }} jam
+            </span>
+          </div>
+  
+          <!-- RIGHT -->
+          <div class="w-[130px] flex justify-between items-center text-sm">
+            <span class="flex items-center gap-1 text-{{ 'green' if data.klasifikasi == 'Baik' else 'red' }}-600 font-semibold whitespace-nowrap">
+              <i class="fas fa-{{ 'check-circle' if data.klasifikasi == 'Baik' else 'exclamation-circle' }}"></i>
+              {{ data.klasifikasi }}
+            </span>
+            <svg class="w-4 h-4 text-gray-600 transition-transform transform accordion-icon" fill="none" stroke="currentColor" stroke-width="2"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
+  
+        <!-- DROPDOWN CONTENT -->
+        <div class="hidden px-6 py-6 bg-white border-t border-gray-200">
+          <div class="flex flex-col sm:flex-row gap-6 sm:gap-10">
+          <!-- KIRI: Ikon Cuaca dan Parameter -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center sm:gap-6 w-full sm:w-full w-2/3 max-w-3xl pr-6">
+            <img src="{{ url_for('static', filename='img/color-logo.png') }}"
+                alt="Ikon Cuaca" class="w-32 h-32 object-contain drop-shadow mb-4 sm:mb-0" />
+  
+            <div class="flex flex-col text-sm text-gray-800 w-full space-y-3">
+              <!-- RH -->
+              <div class="flex justify-between border-b pb-2">
+                <span class="flex items-center gap-2">
+                  <img src="{{ url_for('static', filename='img/icons/rh-icon.png') }}" class="w-5 h-5" />
+                  Kelembapan Udara
+                </span>
+                <span class="flex items-center font-bold">
+                  {{ data.RH }}%
+                  {% if data.is_rh_warning %}
+                  <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                  </svg>
+                  {% endif %}
+                </span>
+              </div>
+  
+              <!-- TAVG -->
+              <div class="flex justify-between border-b pb-2">
+                <span class="flex items-center gap-2">
+                  <img src="{{ url_for('static', filename='img/icons/tavg-icon.png') }}" class="w-6 h-5" />
+                  Suhu Udara
+                </span>
+                <span class="flex items-center font-bold">
+                  {{ data.TAVG }}°C
+                  {% if data.is_tavg_warning %}
+                  <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                  </svg>
+                  {% endif %}
+                </span>
+              </div>
+  
+              <!-- RR -->
+              <div class="flex justify-between border-b pb-2">
+                <span class="flex items-center gap-2">
+                  <img src="{{ url_for('static', filename='img/icons/rr-icon.png') }}" class="w-6 h-5" />
+                  Curah Hujan
+                </span>
+                <span class="flex items-center font-bold">
+                  {{ data.RR }} mm
+                  {% if data.is_rr_warning %}
+                  <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                  </svg>
+                  {% endif %}
+                </span>
+              </div>
+  
+              <!-- SS -->
+              <div class="flex justify-between">
+                <span class="flex items-center gap-2">
+                  <img src="{{ url_for('static', filename='img/icons/ss-icon.png') }}" class="w-6 h-5" />
+                  Lama Penyinaran
+                </span>
+                <span class="flex items-center font-bold">
+                  {{ data.SS }} jam
+                  {% if data.is_ss_warning %}
+                  <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                  </svg>
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+  
+            <!-- KANAN: Klasifikasi -->
+            <div class="flex flex-row w-full sm:items-center sm:justify-start gap-6 sm:gap-10 mt-4 sm:mt-0 ml-5">
+  
+              <!-- Ikon dan Status -->
+              <div class="flex flex-col items-center w-40 ml-10">
+                <img src="{{ url_for('static', filename='img/icons/' ~ ('goodclassicon.png' if data.klasifikasi == 'Baik' else 'badclassicon.png')) }}"
+                    class="w-26 h-26 drop-shadow-md mb-2" alt="Status Icon">
+                <p class="text-xl font-bold text-{{ 'green' if data.klasifikasi == 'Baik' else 'red' }}-600 leading-tight">
+                  {{ data.klasifikasi }}
+                </p>
+                <p class="text-sm font-medium text-gray-500 -mt-1">Kondisi Cuaca</p>
+              </div>
+  
+              <!-- Penjelasan -->
+              <div class="flex flex-col justify-center text-sm text-gray-800 w-full max-w-md ml-[-8px]">
+  
+                <ul class="space-y-2 w-full border-l pl-6 sm:pl-8">
+                  {% for ket in data.penjelasan %}
+                  <li class="border-b pb-1">{{ ket }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+  
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+  
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-[#0F172A] text-white text-sm py-3 px-6 text-left">
+    <span class="italic">Jaga Jeruk, 2025.</span>
+  </footer>
+
+</body>
+</html>
