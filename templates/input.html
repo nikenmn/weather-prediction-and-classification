@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Masukkan Data Cuaca - Jaga Jeruk</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    #sidebar-menu { transition: transform 0.3s ease; transform: translateX(100%); }
+    #sidebar-menu.open { transform: translateX(0); }
+  </style>
+</head>
+<body class="relative bg-gray-100 min-h-screen flex flex-col">
+
+  <!-- navbar -->
+  <header class="fixed top-0 left-0 w-full bg-[#030E17] text-white px-6 py-3 z-50 shadow-md">
+    <div class="flex items-center justify-between w-full">
+      
+      <!-- Logo -->
+      <div class="flex items-center space-x-2">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" class="w-10 h-10 object-contain" />
+        <span class="font-bold italic text-white text-base">Jaga Jeruk</span>
+      </div>
+
+      <!-- Menu + Home -->
+      <div class="flex items-center space-x-4">
+        <!-- Desktop Menu -->
+        <nav class="hidden sm:flex space-x-6 text-sm font-normal tracking-tight">
+            <a href="{{ url_for('input_data') }}"
+               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'input' else 'hover:bg-gray-600' }}">
+              Masukkan Data Cuaca
+            </a>
+            <a href="{{ url_for('prediksi') }}#cuaca7hari"
+               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-600' }}">
+              Lihat Kondisi Cuaca
+            </a>
+            <a href="{{ url_for('unduh') }}"
+               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'unduh' else 'hover:bg-gray-600' }}">
+              Unduh Kondisi Cuaca
+            </a>
+          </nav>
+          
+
+        <!-- Mobile Toggle Button -->
+        <button id="menu-button" class="sm:hidden focus:outline-none text-xl">
+          <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Home Icon -->
+        <a aria-label="Home" href="{{ url_for('index') }}"
+           class="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition">
+          <i class="fas fa-home text-white text-lg"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+    <!-- Sidebar menu untuk mobile -->
+    <div id="sidebar-menu"
+        class="fixed top-0 right-[-100%] h-full w-60 bg-[#030E17] text-white p-6 space-y-4 shadow-lg z-50 transition-all duration-300 sm:hidden">
+    <button id="close-sidebar" class="mb-4 w-full text-right text-xl">&times;</button>
+    <a href="{{ url_for('input_data') }}"
+        class="block px-4 py-2 rounded transition {{ 'bg-gray-600' if current_page == 'input' else 'hover:bg-gray-700' }}">
+        Masukkan Data Cuaca
+    </a>
+    <a href="{{ url_for('prediksi') }}"
+        class="block px-4 py-2 rounded transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-700' }}">
+        Lihat Kondisi Cuaca
+    </a>
+    <a href="{{ url_for('unduh') }}"
+        class="block px-4 py-2 rounded transition {{ 'bg-gray-600' if current_page == 'unduh' else 'hover:bg-gray-700' }}">
+        Unduh Kondisi Cuaca
+    </a>
+    </div>
+
+
+<!-- spacing untuk navbar -->
+<div class="pt-20"></div>
+
+<!-- FORM INPUT -->
+<main class="flex-grow">
+  <section class="bg-white rounded-lg max-w-5xl mx-auto flex flex-col sm:flex-row p-6 sm:p-10 shadow-xl">
+    <!-- KIRI: Ilustrasi -->
+    <div class="w-full sm:w-1/2 bg-[#0F172A] rounded-lg flex items-center justify-center p-6">
+      <img src="{{ url_for('static', filename='img/color-logo.png') }}" alt="Weather Icon" class="w-40 h-auto" />
+    </div>
+  
+    <!-- KANAN: Form Input -->
+    <div class="w-full sm:w-1/2 px-6 pt-2 pb-2">
+      <h2 class="text-xl font-semibold text-gray-900 mb-2">Data Parameter Cuaca</h2>
+      <p class="text-sm text-gray-600 mb-6">Masukkan data harian dari 4 parameter cuaca daerah Anda.</p>
+      
+      <form method="POST" action="{{ url_for('proses_input') }}" class="space-y-6 text-sm text-gray-800">
+          <!-- Tanggal -->
+          <div>
+            <label for="tanggal" class="block font-semibold mb-1">Tanggal</label>
+            <input type="date" id="tanggal" name="tanggal"
+                   class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring focus:border-blue-500"
+                   required>
+          </div>
+        
+          <!-- RH -->
+          <div>
+            <label for="RH" class="block font-semibold mb-1">Kelembapan Udara (%)</label>
+            <input type="number" id="RH" name="RH" step="0.1" placeholder="Contoh: 85.0"
+                   class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring focus:border-blue-500"
+                   required>
+          </div>
+        
+          <!-- TAVG -->
+          <div>
+            <label for="TAVG" class="block font-semibold mb-1">Suhu Udara (°C)</label>
+            <input type="number" id="TAVG" name="TAVG" step="0.1" placeholder="Contoh: 29.0"
+                   class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring focus:border-blue-500"
+                   required>
+          </div>
+        
+          <!-- RR -->
+          <div>
+            <label for="RR" class="block font-semibold mb-1">Curah Hujan (mm)</label>
+            <input type="number" id="RR" name="RR" step="0.1" placeholder="Contoh: 7.0"
+                   class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring focus:border-blue-500"
+                   required>
+          </div>
+        
+          <!-- SS -->
+          <div>
+            <label for="SS" class="block font-semibold mb-1">Lama Penyinaran Matahari (jam)</label>
+            <input type="number" id="SS" name="SS" step="0.1" placeholder="Contoh: 4.0"
+                   class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring focus:border-blue-500"
+                   required>
+          </div>
+        
+          <!-- Tombol Kirim -->
+          <div>
+            <button type="submit"
+                    class="mt-4 bg-[#0F172A] text-white font-semibold text-sm px-6 py-2 rounded hover:bg-[#1E293B] transition">
+              Kirim
+            </button>
+          </div>
+        </form>
+        
+  
+      <!-- SECTION: Upload CSV -->
+      <div class="flex flex-col items-center justify-center mt-10 space-y-1">
+          <p class="text-sm text-gray-700">Anda memiliki data harian dalam jumlah banyak?</p>
+          <a href="{{ url_for('upload_csv') }}"
+          class="flex items-center justify-between gap-2 text-sm font-semibold text-gray-700 hover:text-black transition">
+          Unggah file saja
+          <span class="w-7 h-7 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition">
+              <i class="fas fa-arrow-right text-sm"></i>
+          </span>
+          </a>
+      </div>
+    
+    </div>
+  </section>
+  
+  {% if sukses %}
+  <script>
+  Swal.fire({
+    title: '<strong>Data sukses ditambahkan.</strong>',
+    imageUrl: "{{ url_for('static', filename='img/icons/thumbsup.png') }}",  // ganti sesuai nama file gambar kamu
+    imageWidth: 120,
+    imageHeight: 120,
+    imageAlt: 'Ikon Sukses',
+    confirmButtonText: 'Kembali'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      window.location.href = "{{ url_for('input_data') }}";  // redirect
+    }
+  });
+  </script>
+  {% endif %}
+</main>
+
+
+
+  <!-- Footer -->
+  <footer class="bg-[#0F172A] text-white text-sm py-3 px-6 text-left pt">
+    <span class="italic">Jaga Jeruk, 2025.</span>
+  </footer>
+</body>
+</html>

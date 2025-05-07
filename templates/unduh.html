@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Unduh Data Cuaca</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- navbar -->
+  <header class="fixed top-0 left-0 w-full bg-[#030E17] text-white px-6 py-3 z-50 shadow-md">
+    <div class="flex items-center justify-between w-full">
+      
+      <!-- Logo -->
+      <div class="flex items-center space-x-2">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" class="w-10 h-10 object-contain" />
+        <span class="font-bold italic text-white text-base">Jaga Jeruk</span>
+      </div>
+
+      <!-- Menu + Home -->
+      <div class="flex items-center space-x-4">
+        <!-- Desktop Menu -->
+        <nav class="hidden sm:flex space-x-6 text-sm font-normal tracking-tight">
+            <a href="{{ url_for('input_data') }}"
+               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'input' else 'hover:bg-gray-600' }}">
+              Masukkan Data Cuaca
+            </a>
+            <a href="{{ url_for('prediksi') }}#cuaca7hari"
+               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-600' }}">
+              Lihat Kondisi Cuaca
+            </a>
+            <a href="{{ url_for('unduh') }}"
+               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'unduh' else 'hover:bg-gray-600' }}">
+              Unduh Kondisi Cuaca
+            </a>
+          </nav>
+          
+
+        <!-- Mobile Toggle Button -->
+        <button id="menu-button" class="sm:hidden focus:outline-none text-xl">
+          <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Home Icon -->
+        <a aria-label="Home" href="{{ url_for('index') }}"
+           class="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition">
+          <i class="fas fa-home text-white text-lg"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+    <!-- Sidebar menu untuk mobile -->
+    <div id="sidebar-menu"
+        class="fixed top-0 right-[-100%] h-full w-60 bg-[#030E17] text-white p-6 space-y-4 shadow-lg z-50 transition-all duration-300 sm:hidden">
+    <button id="close-sidebar" class="mb-4 w-full text-right text-xl">&times;</button>
+    <a href="{{ url_for('input_data') }}"
+        class="block px-4 py-2 rounded transition {{ 'bg-gray-600' if current_page == 'input' else 'hover:bg-gray-700' }}">
+        Masukkan Data Cuaca
+    </a>
+    <a href="{{ url_for('prediksi') }}"
+        class="block px-4 py-2 rounded transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-700' }}">
+        Lihat Kondisi Cuaca
+    </a>
+    <a href="{{ url_for('unduh') }}"
+        class="block px-4 py-2 rounded transition {{ 'bg-gray-600' if current_page == 'unduh' else 'hover:bg-gray-700' }}">
+        Unduh Kondisi Cuaca
+    </a>
+    </div>
+
+
+<!-- Main -->
+<main class="pt-28 pb-20 max-w-6xl mx-auto px-6 sm:px-10">
+  <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Data Prediksi & Klasifikasi Cuaca 7 Hari</h2>
+
+  <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+    <table class="min-w-full text-sm text-left text-gray-700">
+      <thead class="bg-[#0F172A] text-white">
+        <tr>
+          <th class="px-4 py-3">Hari</th>
+          <th class="px-4 py-3">Tanggal</th>
+          <th class="px-4 py-3">RH (%)</th>
+          <th class="px-4 py-3">TAVG (°C)</th>
+          <th class="px-4 py-3">RR (mm)</th>
+          <th class="px-4 py-3">SS (jam)</th>
+          <th class="px-4 py-3">Klasifikasi</th>
+          <th class="px-4 py-3">Penjelasan</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in cuaca_harian %}
+        <tr class="border-b hover:bg-gray-50">
+          <td class="px-4 py-2 font-semibold">{{ d.hari }}</td>
+          <td class="px-4 py-2">{{ d.tanggal }}</td>
+          <td class="px-4 py-2">{{ d.RH }}</td>
+          <td class="px-4 py-2">{{ d.TAVG }}</td>
+          <td class="px-4 py-2">{{ d.RR }}</td>
+          <td class="px-4 py-2">{{ d.SS }}</td>
+          <td class="px-4 py-2 font-bold text-{{ 'green' if d.klasifikasi == 'Baik' else 'red' }}-600">{{ d.klasifikasi }}</td>
+          <td class="px-4 py-2 text-sm">{{ ', '.join(d.penjelasan) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tombol Unduh -->
+  <div class="mt-8 text-center space-x-4">
+    <a href="{{ url_for('unduh_cuaca_pdf') }}"
+       class="inline-flex items-center gap-2 bg-[#0F172A] text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#1E293B] transition">
+      <i class="fas fa-file-pdf text-red-400"></i> Unduh PDF
+    </a>
+    <a href="{{ url_for('unduh_cuaca_csv') }}"
+       class="inline-flex items-center gap-2 bg-[#0F172A] text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#1E293B] transition">
+      <i class="fas fa-file-csv text-green-300"></i> Unduh CSV
+    </a>
+  </div>
+</main>
+
+    <!-- Footer -->
+    <footer class="bg-[#0F172A] text-white text-sm py-3 px-6 text-left">
+        <span class="italic">Jaga Jeruk, 2025.</span>
+    </footer>
+</body>
+</html>
