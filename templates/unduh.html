@@ -29,18 +29,19 @@
       <div class="flex items-center space-x-4">
         <!-- Desktop Menu -->
         <nav class="hidden sm:flex space-x-6 text-sm font-normal tracking-tight">
-            <a href="{{ url_for('input_data') }}"
-               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'input' else 'hover:bg-gray-600' }}">
-              Masukkan Data Cuaca
-            </a>
-            <a href="{{ url_for('prediksi') }}#cuaca7hari"
-               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-600' }}">
-              Lihat Kondisi Cuaca
-            </a>
-            <a href="{{ url_for('unduh') }}"
-               class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'unduh' else 'hover:bg-gray-600' }}">
-              Unduh Kondisi Cuaca
-            </a>
+                    <a href="{{ url_for('input_data') }}" 
+                    class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'input_data' else 'hover:bg-gray-600' }}">
+                      Masukkan Data Cuaca
+                    </a>
+                    <a href="{{ url_for('prediksi') }}#cuaca7hari" class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'prediksi' else 'hover:bg-gray-600' }}">
+                      Lihat Kondisi Cuaca
+                    </a>
+                    <a href="{{ url_for('unduh') }}" class="px-4 py-2 rounded-full transition {{ 'bg-gray-600' if current_page == 'unduh' else 'hover:bg-gray-600' }}">
+                      Unduh Kondisi Cuaca
+                    </a>
+                    <a href="{{ url_for('latih_model') }}" class="px-4 py-2 rounded-full rounded-full transition {{ 'bg-gray-600' if current_page == 'latih_model' else 'hover:bg-gray-600' }}">
+                      Latih Model
+                    </a>
           </nav>
           
 

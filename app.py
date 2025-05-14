@@ -37,23 +37,92 @@ def klasifikasi_cuaca(RH, TAVG, RR, SS):
 app = Flask(__name__)
 app.secret_key = 'rahasia123'  
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/cuaca_jeruk'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/jaga_jeruk'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+
+# ==========================
+# Models sesuai struktur SQL
+# ==========================
+
+class WeatherData(db.Model):
+    __tablename__ = 'weather_data_raw'
+    id = db.Column(db.Integer, primary_key=True)
+    day_of_year = db.Column(db.Integer)
+    year = db.Column(db.Integer)
+    tavg = db.Column(db.Float)
+    rh_avg = db.Column(db.Float)
+    rr = db.Column(db.Float)
+    ss = db.Column(db.Float)
+
+
+class WeatherCombined(db.Model):
+    __tablename__ = 'weather_data_combined'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    year = db.Column(db.Integer)
+    day_of_year = db.Column(db.Integer)
+    tavg = db.Column(db.Float)
+    rh_avg = db.Column(db.Float)
+    rr = db.Column(db.Float)
+    ss = db.Column(db.Float)
+    added_at = db.Column(db.DateTime, default=datetime.now)
+
+
+class ModelRegression(db.Model):
+    __tablename__ = 'model_regression'
+    id = db.Column(db.Integer, primary_key=True)
+    parameter_name = db.Column(db.String(10))
+    model_path = db.Column(db.Text)
+    trained_on = db.Column(db.DateTime)
+    version = db.Column(db.Integer)
+    model_score_r2 = db.Column(db.Float)
+    model_score_rmse = db.Column(db.Float)
+    params_json = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=False)
+
+
+class ModelClassification(db.Model):
+    __tablename__ = 'model_classification'
+    id = db.Column(db.Integer, primary_key=True)
+    model_path = db.Column(db.Text)
+    trained_on = db.Column(db.DateTime)
+    version = db.Column(db.Integer)
+    weights_json = db.Column(db.Text)
+    threshold = db.Column(db.Float)
+    score_accuracy = db.Column(db.Float)
+    is_active = db.Column(db.Boolean, default=False)
+
+
+class ForecastResults(db.Model):
+    __tablename__ = 'forecast_results'
+    id = db.Column(db.Integer, primary_key=True)
+    forecast_date = db.Column(db.Date, nullable=False)
+    pred_tavg = db.Column(db.Float)
+    pred_rh_avg = db.Column(db.Float)
+    pred_rr = db.Column(db.Float)
+    pred_ss = db.Column(db.Float)
+    classification_label = db.Column(db.Enum('Baik', 'Buruk'))
+    classification_reason = db.Column(db.Text)
+    generated_at = db.Column(db.DateTime, default=datetime.now)
+
+
+class TrainingLog(db.Model):
+    __tablename__ = 'training_log'
+    id = db.Column(db.Integer, primary_key=True)
+    model_type = db.Column(db.Enum('regression', 'classification'))
+    parameter_name = db.Column(db.String(10))
+    trained_by = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    trained_at = db.Column(db.DateTime, default=datetime.now)
+
 
 ALLOWED_EXTENSIONS = {'csv'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Model tabel sesuai DB 
-class WeatherData(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    tanggal = db.Column(db.Date, nullable=False)
-    RH_AVG = db.Column(db.Float, nullable=False)
-    TAVG = db.Column(db.Float, nullable=False)
-    RR = db.Column(db.Float, nullable=False)
-    SS = db.Column(db.Float, nullable=False)
 
 
 @app.route('/')
@@ -94,15 +163,26 @@ def index():
             'is_ss_warning': SS < 4 or SS > 8,
         })
 
+    
+    for d in cuaca_harian:
+        try:
+            if isinstance(d['tanggal'], datetime):
+                d['tanggal'] = d['tanggal'].strftime('%d-%m-%Y')
+            elif isinstance(d['tanggal'], str) and '-' in d['tanggal']:
+                d['tanggal'] = datetime.strptime(d['tanggal'], '%Y-%m-%d').strftime('%d-%m-%Y')
+        except:
+            pass
 
     cuaca_hari_ini = cuaca_harian[0]
-
+    
+    
     return render_template(
         'index.html',
-        current_page='index', 
+        current_page='index',
         cuaca_hari_ini=cuaca_hari_ini,
         cuaca_harian=cuaca_harian
     )
+
 
 
 
@@ -111,20 +191,29 @@ def index():
 def input_data():
     return render_template('input.html', current_page='input')
 
-
+# Proses input
 @app.route('/proses_input', methods=['POST'])
 def proses_input():
-    tanggal = datetime.strptime(request.form['tanggal'], '%Y-%m-%d').date()
-    data = WeatherData(
-        tanggal=tanggal,
-        RH_AVG=float(request.form['RH']),
-        TAVG=float(request.form['TAVG']),
-        RR=float(request.form['RR']),
-        SS=float(request.form['SS']),
+    tanggal_obj = datetime.strptime(request.form['tanggal'], '%Y-%m-%d')
+    tanggal = tanggal_obj.date()
+    year = tanggal.year
+    day_of_year = tanggal.timetuple().tm_yday
+
+    data = WeatherCombined(
+        date=tanggal,
+        tavg=float(request.form['TAVG']),
+        rh_avg=float(request.form['RH']),
+        rr=float(request.form['RR']),
+        ss=float(request.form['SS']),
+        year=year,
+        day_of_year=day_of_year,
     )
+
     db.session.add(data)
     db.session.commit()
     return render_template('input.html', sukses=True, current_page='input')
+
+
 
 
 
@@ -156,19 +245,33 @@ def proses_upload_csv():
     try:
         df = pd.read_csv(file)
 
-        # Cek kolom
         required_columns = ['Tanggal', 'RH', 'TAVG', 'RR', 'SS']
         if not all(col in df.columns for col in required_columns):
             flash('Format CSV tidak sesuai. Kolom harus mengandung: Tanggal, RH, TAVG, RR, SS.')
             return redirect(url_for('upload_csv'))
 
-        # Cek tipe data numerik
         for col in ['RH', 'TAVG', 'RR', 'SS']:
             if not pd.api.types.is_numeric_dtype(df[col]):
                 flash(f'Kolom {col} harus berupa angka/desimal.')
                 return redirect(url_for('upload_csv'))
 
-        # Jika semua valid → tampilkan popup
+        for _, row in df.iterrows():
+            tanggal = datetime.strptime(request.form['tanggal'], '%Y-%m-%d').date()
+            day_of_year = tanggal.timetuple().tm_yday
+            year = tanggal.year
+
+            data = WeatherCombined(
+                date=tanggal,
+                rh_avg=row['RH'],
+                tavg=row['TAVG'],
+                rr=row['RR'],
+                ss=row['SS'],
+                day_of_year=day_of_year,
+                year=year,
+            )
+            db.session.add(data)
+            db.session.commit()
+
         return render_template("upload.html", sukses=True)
 
     except Exception as e:
@@ -181,15 +284,21 @@ def proses_upload_csv():
 
 
 
-# HALAMAN PREDIKSI (nanti bisa isi dummy dulu)
+
+# HALAMAN PREDIKSI ()
 @app.route('/')
 def prediksi():
-    # Simulasikan data cuaca_harian sementara
-    dummy_data = [{
-        'hari': 'Kamis', 'tanggal': '2025-05-08', 'RH': 75, 'TAVG': 27.0, 'RR': 5.0, 'SS': 7.0,
-        'klasifikasi': 'Baik', 'penjelasan': ['Suhu cukup baik', 'Kelembapan optimal']
-    }]
-    return render_template('index.html', cuaca_harian=dummy_data, current_page='prediksi')
+    cuaca_harian = generate_7day_prediction()
+    try:
+        if isinstance(d['tanggal'], datetime):
+            d['tanggal'] = d['tanggal'].strftime('%d-%m-%Y')
+        elif isinstance(d['tanggal'], str) and '-' in d['tanggal']:
+            d['tanggal'] = datetime.strptime(d['tanggal'], '%Y-%m-%d').strftime('%d-%m-%Y')
+    except:
+        pass
+    return render_template('lihatCuaca.html', cuaca_harian=cuaca_harian, current_page='prediksi')
+
+
 
 
 
@@ -197,6 +306,15 @@ def prediksi():
 @app.route('/unduh')
 def unduh():
     cuaca_harian = get_cuaca_7_hari()
+    for d in cuaca_harian:
+        try:
+            if isinstance(d['tanggal'], datetime):
+                d['tanggal'] = d['tanggal'].strftime('%d-%m-%Y')
+            elif isinstance(d['tanggal'], str) and '-' in d['tanggal']:
+                d['tanggal'] = datetime.strptime(d['tanggal'], '%Y-%m-%d').strftime('%d-%m-%Y')
+        except:
+            pass
+
     return render_template('unduh.html', cuaca_harian=cuaca_harian, current_page='unduh')
 
 @app.route('/unduh-cuaca-csv')
@@ -358,10 +476,34 @@ def generate_7day_prediction():
 @app.route('/lihat-cuaca')
 def lihat_kondisi_cuaca():
     cuaca_harian = generate_7day_prediction()
+    try:
+        if isinstance(d['tanggal'], datetime):
+            d['tanggal'] = d['tanggal'].strftime('%d-%m-%Y')
+        elif isinstance(d['tanggal'], str) and '-' in d['tanggal']:
+            d['tanggal'] = datetime.strptime(d['tanggal'], '%Y-%m-%d').strftime('%d-%m-%Y')
+    except:
+        pass
     return render_template('lihatCuaca.html', cuaca_harian=cuaca_harian, current_page='prediksi')
 
 
+@app.route('/latih-model')
+def latih_model():
+    # Simulasi isi riwayat model, nanti bisa ambil dari file/folder/database
+    riwayat_model = [
+        {
+            'id': 1,
+            'filename': 'prediction_model1.pkl',
+            'tanggal_batas_data': '31-12-2024',
+            'tanggal_latih': '28-5-2025',
+            'terpilih': True
+        }
+    ]
 
+    return render_template(
+        'latihModel.html',
+        riwayat_model=riwayat_model,
+        current_page='latih_model'
+    )
 
 
 

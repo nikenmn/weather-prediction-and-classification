@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Latih Model</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen bg-white text-gray-800">
+
+  <!-- Navbar -->
+  <header class="fixed top-0 left-0 w-full bg-[#030E17] text-white px-6 py-3 z-50 shadow-md">
+    <div class="flex items-center justify-between w-full">
+      <div class="flex items-center space-x-2">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" class="w-10 h-10 object-contain" />
+        <span class="font-bold italic text-white text-base">Jaga Jeruk</span>
+      </div>
+      <div class="flex items-center space-x-4">
+        <nav class="hidden sm:flex space-x-6 text-sm font-normal tracking-tight">
+          <a href="{{ url_for('input_data') }}" class="px-4 py-2 rounded-full transition hover:bg-gray-600">
+            Masukkan Data Cuaca
+          </a>
+          <a href="{{ url_for('prediksi') }}#cuaca7hari" class="px-4 py-2 rounded-full transition hover:bg-gray-600">
+            Lihat Kondisi Cuaca
+          </a>
+          <a href="{{ url_for('unduh') }}" class="px-4 py-2 rounded-full transition hover:bg-gray-600">
+            Unduh Kondisi Cuaca
+          </a>
+          <a href="{{ url_for('latih_model') }}" class="px-4 py-2 rounded-full bg-gray-600">
+            Latih Model
+          </a>
+        </nav>
+        <a href="{{ url_for('index') }}" class="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition">
+          <i class="fas fa-home text-white text-lg"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <main class="flex-grow pt-36 pb-20 max-w-6xl mx-auto px-6 sm:px-10">
+    <h2 class="text-2xl font-bold italic text-center mb-8 border-t border-gray-300 pt-2">Latih Model</h2>
+
+    <div class="flex items-center justify-center gap-4 mb-8">
+      <p class="text-sm text-gray-700">Tertanggal data input terakhir:</p>
+      <input type="text" placeholder="dd - mm - yyyy" class="px-3 py-1 text-sm border border-gray-300 rounded bg-gray-100 focus:outline-none">
+      <button class="bg-[#0F172A] text-white text-sm px-5 py-2 rounded-full hover:bg-[#1E293B] transition">
+        Latih model baru
+      </button>
+    </div>
+
+
+    <h3 class="text-xl font-semibold italic mb-4">Riwayat Model</h3>
+    <div class="bg-white rounded-xl shadow p-4 overflow-x-auto">
+      <table class="min-w-full text-sm text-left text-gray-700">
+        <thead class="border-b border-gray-300">
+          <tr>
+            <th class="px-4 py-3">No</th>
+            <th class="px-4 py-3">Versi Riwayat</th>
+            <th class="px-4 py-3">Tanggal Batas Data</th>
+            <th class="px-4 py-3">Tanggal Latih Model</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="border-t hover:bg-gray-50">
+            <td class="px-4 py-2">1</td>
+            <td class="px-4 py-2">prediction_model1.pkl</td>
+            <td class="px-4 py-2">31-12-2024</td>
+            <td class="px-4 py-2">28-5-2025</td>
+            <td class="px-4 py-2 text-center">
+              <input type="checkbox" checked class="form-checkbox text-blue-600 w-4 h-4">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tombol Terapkan -->
+    <div class="flex justify-center mt-8">
+      <button class="bg-[#0F172A] text-white text-sm px-6 py-2 rounded-full hover:bg-[#1E293B] transition">
+        Terapkan model versi spesifik
+      </button>
+    </div>
+  </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#0F172A] text-white text-sm py-3 px-6 text-left">
+        <span class="italic">Jaga Jeruk, 2025.</span>
+    </footer>
+
+</body>
+</html>
