@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import ExtraTreesRegressor
@@ -18,7 +17,7 @@ def preprocess_weather_data():
         from sqlalchemy import text
 
         raw_data = WeatherData.query.order_by(WeatherData.date).all()
-        print(f"🔄 Jumlah data di weather_data_raw: {len(raw_data)}")
+        print(f"Jumlah data di weather_data_raw: {len(raw_data)}")
 
         df = pd.DataFrame([{
             'date': row.date,
@@ -28,27 +27,19 @@ def preprocess_weather_data():
             'ss': row.ss
         } for row in raw_data])
 
-        # 1. Konversi tanggal dan hapus baris error
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')  # Ubah invalid jadi NaT
-        df = df.dropna(subset=['date'])  # Hapus baris tanggal invalid
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        df = df.dropna(subset=['date'])
         df = df.sort_values(by='date')
 
-
-
-        # 2. Ganti 8888/9999 jadi NaN
         df.replace({8888.0: np.nan, 9999.0: np.nan}, inplace=True)
-
-        # 3. Imputasi ffill + bfill
-        print("🧪 NaN sebelum isi:\n", df.isna().sum())
+        print("NaN sebelum isi:\n", df.isna().sum())
         df = df.ffill()
         df = df.bfill()
-        print("✅ NaN sesudah isi:\n", df.isna().sum())
+        print("NaN sesudah isi:\n", df.isna().sum())
 
-        # 4. Tambah fitur musiman
         df['day_of_year'] = df['date'].dt.dayofyear
         df['year'] = df['date'].dt.year
 
-        # 5. Interpolasi RR per tahun (PCHIP)
         def interpolate_rr(group):
             mask = group['rr'].notna()
             if mask.sum() > 3:
@@ -60,7 +51,6 @@ def preprocess_weather_data():
         df = df.groupby('year', group_keys=False).apply(interpolate_rr)
         df['rr'] = df['rr'].round(1)
 
-        # 6. Simpan ke cleaned
         inserted = 0
         for _, row in df.iterrows():
             tanggal = row['date'].date()
@@ -81,25 +71,21 @@ def preprocess_weather_data():
             inserted += 1
 
         db.session.commit()
-        print(f"✅ Preprocessing selesai. {inserted} baris berhasil dimasukkan ke weather_data_cleaned.")
+        print(f"Preprocessing selesai. {inserted} baris berhasil dimasukkan ke weather_data_cleaned.")
 
-        # 7. Reset AUTO_INCREMENT ke ID terakhir + 1
         result = db.session.execute(text("SELECT MAX(id) FROM weather_data_cleaned"))
         max_id = result.scalar() or 0
         next_id = max_id + 1
         db.session.execute(text(f"ALTER TABLE weather_data_cleaned AUTO_INCREMENT = {next_id}"))
         db.session.commit()
-        print(f"🔁 AUTO_INCREMENT diset ke {next_id}")
+        print(f"AUTO_INCREMENT diset ke {next_id}")
 
         return df
 
     except Exception as e:
-        print(f"🔥 ERROR saat preprocessing: {e}")
+        print(f"ERROR saat preprocessing: {e}")
         flash(f'Error during preprocessing: {str(e)}', 'danger')
         return pd.DataFrame()
-
-
-
 
 
 def label_classification_data(df, weights):
@@ -107,7 +93,7 @@ def label_classification_data(df, weights):
         df_norm = df[['rh_avg', 'tavg', 'rr', 'ss']].copy()
         scaler = MinMaxScaler()
         df_norm[['rh_avg', 'tavg', 'rr', 'ss']] = scaler.fit_transform(df_norm)
-        df_norm['rr'] = 1 - df_norm['rr']  # inverse for rainfall
+        df_norm['rr'] = 1 - df_norm['rr']
 
         df['score'] = (
             df_norm['rh_avg'] * weights['rh_avg'] +
