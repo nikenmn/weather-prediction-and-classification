@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, Response, send_file, redirect, url_for, flash
 import joblib
-from flask_sqlalchemy import SQLAlchemy
+from database_models import db, WeatherData, WeatherCombined, ModelRegression, ModelClassification, ForecastResults, TrainingLog, ModelHistory
 from datetime import datetime
 import pytz
 import numpy as np
@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import os
 import locale
+
 
 
 
@@ -39,89 +40,19 @@ app.secret_key = 'rahasia123'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/jaga_jeruk'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
-
-# ==========================
-# Models sesuai struktur SQL
-# ==========================
-
-class WeatherData(db.Model):
-    __tablename__ = 'weather_data_raw'
-    id = db.Column(db.Integer, primary_key=True)
-    day_of_year = db.Column(db.Integer)
-    year = db.Column(db.Integer)
-    tavg = db.Column(db.Float)
-    rh_avg = db.Column(db.Float)
-    rr = db.Column(db.Float)
-    ss = db.Column(db.Float)
-
-
-class WeatherCombined(db.Model):
-    __tablename__ = 'weather_data_combined'
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False)
-    year = db.Column(db.Integer)
-    day_of_year = db.Column(db.Integer)
-    tavg = db.Column(db.Float)
-    rh_avg = db.Column(db.Float)
-    rr = db.Column(db.Float)
-    ss = db.Column(db.Float)
-    added_at = db.Column(db.DateTime, default=datetime.now)
-
-
-class ModelRegression(db.Model):
-    __tablename__ = 'model_regression'
-    id = db.Column(db.Integer, primary_key=True)
-    parameter_name = db.Column(db.String(10))
-    model_path = db.Column(db.Text)
-    trained_on = db.Column(db.DateTime)
-    version = db.Column(db.Integer)
-    model_score_r2 = db.Column(db.Float)
-    model_score_rmse = db.Column(db.Float)
-    params_json = db.Column(db.Text)
-    is_active = db.Column(db.Boolean, default=False)
-
-
-class ModelClassification(db.Model):
-    __tablename__ = 'model_classification'
-    id = db.Column(db.Integer, primary_key=True)
-    model_path = db.Column(db.Text)
-    trained_on = db.Column(db.DateTime)
-    version = db.Column(db.Integer)
-    weights_json = db.Column(db.Text)
-    threshold = db.Column(db.Float)
-    score_accuracy = db.Column(db.Float)
-    is_active = db.Column(db.Boolean, default=False)
-
-
-class ForecastResults(db.Model):
-    __tablename__ = 'forecast_results'
-    id = db.Column(db.Integer, primary_key=True)
-    forecast_date = db.Column(db.Date, nullable=False)
-    pred_tavg = db.Column(db.Float)
-    pred_rh_avg = db.Column(db.Float)
-    pred_rr = db.Column(db.Float)
-    pred_ss = db.Column(db.Float)
-    classification_label = db.Column(db.Enum('Baik', 'Buruk'))
-    classification_reason = db.Column(db.Text)
-    generated_at = db.Column(db.DateTime, default=datetime.now)
-
-
-class TrainingLog(db.Model):
-    __tablename__ = 'training_log'
-    id = db.Column(db.Integer, primary_key=True)
-    model_type = db.Column(db.Enum('regression', 'classification'))
-    parameter_name = db.Column(db.String(10))
-    trained_by = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    trained_at = db.Column(db.DateTime, default=datetime.now)
+db.init_app(app)
 
 
 ALLOWED_EXTENSIONS = {'csv'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def get_model_folder_path():
+    model_aktif = ModelHistory.query.filter_by(is_active=True).first()
+    return model_aktif.folder_path if model_aktif else None
+
 
 
 
@@ -199,15 +130,15 @@ def proses_input():
     year = tanggal.year
     day_of_year = tanggal.timetuple().tm_yday
 
-    data = WeatherCombined(
+    data = WeatherData(
         date=tanggal,
         tavg=float(request.form['TAVG']),
         rh_avg=float(request.form['RH']),
         rr=float(request.form['RR']),
         ss=float(request.form['SS']),
-        year=year,
-        day_of_year=day_of_year,
+        # year dan day_of_year biarkan kosong/dikosongkan
     )
+
 
     db.session.add(data)
     db.session.commit()
@@ -215,14 +146,9 @@ def proses_input():
 
 
 
-
-
-# Route untuk form unggah csv
-@app.route('/unggah-csv')
+@app.route('/unggah-csv', methods=['GET'])
 def upload_csv():
-    return render_template("upload.html", sukses=False, current_page='input')
-
-
+    return render_template("upload.html", sukses=False, current_page='upload')
 
 
 
@@ -243,8 +169,16 @@ def proses_upload_csv():
         return redirect(url_for('upload_csv'))
 
     try:
+        # 1. Baca file dan normalisasi kolom
         df = pd.read_csv(file)
+        df.rename(columns={'TANGGAL': 'Tanggal', 'RH_AVG': 'RH'}, inplace=True)
 
+        # 2. Konversi tanggal fleksibel
+        df['Tanggal'] = pd.to_datetime(df['Tanggal'], dayfirst=True, errors='coerce')
+        df = df.dropna(subset=['Tanggal'])  # Hapus baris tanggal invalid
+        df = df.sort_values(by='Tanggal')
+
+        # 3. Validasi kolom
         required_columns = ['Tanggal', 'RH', 'TAVG', 'RR', 'SS']
         if not all(col in df.columns for col in required_columns):
             flash('Format CSV tidak sesuai. Kolom harus mengandung: Tanggal, RH, TAVG, RR, SS.')
@@ -255,28 +189,36 @@ def proses_upload_csv():
                 flash(f'Kolom {col} harus berupa angka/desimal.')
                 return redirect(url_for('upload_csv'))
 
+        # 4. Simpan ke weather_data_raw
         for _, row in df.iterrows():
-            tanggal = datetime.strptime(request.form['tanggal'], '%Y-%m-%d').date()
-            day_of_year = tanggal.timetuple().tm_yday
-            year = tanggal.year
-
-            data = WeatherCombined(
-                date=tanggal,
+            data_raw = WeatherData(
+                date=row['Tanggal'].date(),
                 rh_avg=row['RH'],
                 tavg=row['TAVG'],
                 rr=row['RR'],
-                ss=row['SS'],
-                day_of_year=day_of_year,
-                year=year,
+                ss=row['SS']
             )
-            db.session.add(data)
-            db.session.commit()
+            db.session.add(data_raw)
+        db.session.commit()
+        print("✅ Commit sukses ke weather_data_raw")
+
+        # 5. Jalankan preprocessing
+        from train_utills import preprocess_weather_data
+        df_cleaned = preprocess_weather_data()
+        print(f"🧪 Preprocessing selesai: {len(df_cleaned)} baris masuk ke weather_data_cleaned")
 
         return render_template("upload.html", sukses=True)
 
     except Exception as e:
+        print(f"🔥 ERROR saat upload: {e}")
         flash(f'Terjadi kesalahan saat membaca file: {str(e)}')
         return redirect(url_for('upload_csv'))
+
+
+
+
+
+
 
 
 
@@ -437,41 +379,78 @@ def penjelas_parameter(RH, TAVG, RR, SS):
 
     return penjelasan
 
+def get_model_folder_path():
+    model_aktif = ModelHistory.query.filter_by(is_active=True).first()
+    if model_aktif:
+        return model_aktif.folder_path
+    return None
+
+
 
 
 from sklearn.preprocessing import StandardScaler  # Jika perlu scaling
 
 def generate_7day_prediction():
-    today = datetime.now(pytz.timezone("Asia/Jakarta"))
+    from pathlib import Path
+    import joblib
+
+    folder = get_model_folder_path()
+    if not folder:
+        return []
+
+    folder_path = Path(folder)
+    try:
+        model_files = {
+            'tavg': joblib.load(folder_path / 'temperature_model.pkl'),
+            'rh_avg': joblib.load(folder_path / 'humidity_model.pkl'),
+            'rr': joblib.load(folder_path / 'rainfall_model.pkl'),
+            'ss': joblib.load(folder_path / 'sunshine_model.pkl'),
+            'classifier': joblib.load(folder_path / 'knn_classifier.pkl'),
+        }
+    except Exception as e:
+        print(f"Error loading model: {e}")
+        return []
+
+    today = datetime.now()
     hasil = []
 
     for i in range(7):
-        tgl = today + timedelta(days=i)
-        RH = 75 + i
-        TAVG = 25 + (i % 3)
-        RR = 5 + i
-        SS = 7 - (i % 3)
+        tanggal = today + timedelta(days=i)
+        day_of_year = tanggal.timetuple().tm_yday
+        year = tanggal.year
+        fitur = [[day_of_year, year]]
 
-        penjelasan = penjelas_parameter(RH, TAVG, RR, SS)
-        klasifikasi = klasifikasi_cuaca(RH, TAVG, RR, SS)  # pakai model!
+        pred_tavg = model_files['tavg'].predict(fitur)[0]
+        pred_rh = model_files['rh_avg'].predict(fitur)[0]
+        pred_rr = model_files['rr'].predict(fitur)[0]
+        pred_ss = model_files['ss'].predict(fitur)[0]
+
+        # Klasifikasi
+        fitur_klasifikasi = [[pred_tavg, pred_rh, pred_rr, pred_ss]]
+        label = model_files['classifier'].predict(fitur_klasifikasi)[0]
+        klasifikasi = 'Baik' if label == 1 else 'Buruk'
+
+        penjelasan = penjelas_parameter(pred_rh, pred_tavg, pred_rr, pred_ss)
 
         hasil.append({
-            'hari': tgl.strftime('%A'),
-            'tanggal': tgl.strftime('%d/%m/%y'),
-            'RH': RH,
-            'TAVG': TAVG,
-            'RR': RR,
-            'SS': SS,
+            'hari': tanggal.strftime('%A'),
+            'tanggal': tanggal.strftime('%d-%m-%Y'),
+            'TAVG': round(pred_tavg, 1),
+            'RH': round(pred_rh, 1),
+            'RR': round(pred_rr, 1),
+            'SS': round(pred_ss, 1),
             'klasifikasi': klasifikasi,
             'penjelasan': penjelasan,
             'icon': 'goodclassicon.png' if klasifikasi == 'Baik' else 'badclassicon.png',
-            'is_rh_warning': RH < 65 or RH > 85,
-            'is_tavg_warning': TAVG < 25 or TAVG > 30,
-            'is_rr_warning': RR < 3 or RR > 8,
-            'is_ss_warning': SS < 4 or SS > 8,
+            'is_rh_warning': pred_rh < 65 or pred_rh > 85,
+            'is_tavg_warning': pred_tavg < 25 or pred_tavg > 30,
+            'is_rr_warning': pred_rr < 3 or pred_rr > 8,
+            'is_ss_warning': pred_ss < 4 or pred_ss > 8,
         })
 
     return hasil
+
+
 
 @app.route('/lihat-cuaca')
 def lihat_kondisi_cuaca():
@@ -486,24 +465,61 @@ def lihat_kondisi_cuaca():
     return render_template('lihatCuaca.html', cuaca_harian=cuaca_harian, current_page='prediksi')
 
 
+# HALAMAN LATIH MODEL 
 @app.route('/latih-model')
 def latih_model():
-    # Simulasi isi riwayat model, nanti bisa ambil dari file/folder/database
-    riwayat_model = [
-        {
-            'id': 1,
-            'filename': 'prediction_model1.pkl',
-            'tanggal_batas_data': '31-12-2024',
-            'tanggal_latih': '28-5-2025',
-            'terpilih': True
-        }
-    ]
+    from sqlalchemy import func
+
+    # Ambil tanggal terakhir dari weather_data_raw
+    last_date = db.session.query(func.max(WeatherData.date)).scalar()
+    tanggal_terakhir = last_date.strftime('%d-%m-%Y') if last_date else 'Belum ada data'
+
+    # Ambil semua riwayat model dari DB
+    riwayat_model = ModelHistory.query.order_by(ModelHistory.id.desc()).all()
 
     return render_template(
         'latihModel.html',
+        tanggal_terakhir=tanggal_terakhir,
         riwayat_model=riwayat_model,
         current_page='latih_model'
     )
+
+
+
+
+@app.route('/train_model', methods=['POST'])
+def train_model():
+    from train_utils import preprocess_weather_data, label_classification_data, train_models
+
+    # Bobot Copeland/WSM — pastikan ini sesuai Copeland score final
+    weights = {
+        'rh_avg': 0.4,
+        'tavg': 0.3,
+        'rr': 0.2,
+        'ss': 0.1
+    }
+
+    # 1. Jalankan preprocessing data dari tabel weather_data_raw → weather_data_cleaned
+    df = preprocess_weather_data()
+    if df.empty:
+        flash("❌ Data kosong atau gagal preprocessing.", "danger")
+        return redirect(url_for('latih_model'))
+
+    # 2. Tambahkan label klasifikasi berdasarkan WSM
+    df = label_classification_data(df, weights)
+
+    # 3. Latih model dan simpan ke folder
+    folder_path = train_models(df)
+
+    if folder_path:
+        flash("✅ Model baru berhasil dilatih dan diterapkan!", "success")
+    else:
+        flash("❌ Training gagal, model tidak diterapkan.", "danger")
+
+    return redirect(url_for('latih_model'))
+
+
+
 
 
 

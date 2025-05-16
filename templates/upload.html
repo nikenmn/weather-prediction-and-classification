@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -106,8 +107,13 @@
 
         <p class="text-sm font-semibold text-gray-700">
           <span class="italic font-bold">Gunakan format file yang telah disediakan.</span><br>
-          Unduh template <a href="{{ url_for('static', filename='template/data_template.csv') }}" class="text-blue-600 hover:underline">di sini</a>.
+          Unduh template 
+          <a href="{{ url_for('static', filename='templates/data_template.csv') }}" 
+            class="text-blue-600 hover:underline" download>
+            di sini
+          </a>.
         </p>
+
 
         <form action="{{ url_for('proses_upload_csv') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
           <label class="block text-sm font-medium text-gray-700">Unggah dokumen sesuai template</label>
@@ -134,22 +140,23 @@
     </div>
   </main>
 
-  {% if sukses == True %}
-  <script>
-  Swal.fire({
-    title: '<strong>File berhasil diproses.</strong>',
-    imageUrl: "{{ url_for('static', filename='img/icons/thumbsup.png') }}",
-    imageWidth: 120,
-    imageHeight: 120,
-    imageAlt: 'Ikon Sukses',
-    confirmButtonText: 'Kembali'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      window.location.href = "{{ url_for('upload_csv') }}";
-    }
-  });
-  </script>
-  {% endif %}
+{% if sukses %}
+<script>
+Swal.fire({
+  title: '<strong>File berhasil diproses dan disimpan.</strong>',
+  imageUrl: "{{ url_for('static', filename='img/icons/thumbsup.png') }}",
+  imageWidth: 120,
+  imageHeight: 120,
+  imageAlt: 'Ikon Sukses',
+  confirmButtonText: 'Kembali'
+}).then((result) => {
+  if (result.isConfirmed) {
+    window.location.href = "{{ url_for('proses_upload_csv') }}";
+  }
+});
+</script>
+{% endif %}
+
 
   <!-- Footer -->
   <footer class="bg-[#0F172A] text-white text-sm py-3 px-6 text-left">

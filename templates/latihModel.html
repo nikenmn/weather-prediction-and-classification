@@ -48,7 +48,8 @@
 
     <div class="flex items-center justify-center gap-4 mb-8">
       <p class="text-sm text-gray-700">Tertanggal data input terakhir:</p>
-      <input type="text" placeholder="dd - mm - yyyy" class="px-3 py-1 text-sm border border-gray-300 rounded bg-gray-100 focus:outline-none">
+      <input type="text" value="{{ tanggal_terakhir }}" readonly
+            class="px-4 py-2 text-sm border border-gray-300 rounded bg-gray-100 focus:outline-none" />
       <button class="bg-[#0F172A] text-white text-sm px-5 py-2 rounded-full hover:bg-[#1E293B] transition">
         Latih model baru
       </button>
@@ -82,10 +83,13 @@
     </div>
 
     <!-- Tombol Terapkan -->
-    <div class="flex justify-center mt-8">
-      <button class="bg-[#0F172A] text-white text-sm px-6 py-2 rounded-full hover:bg-[#1E293B] transition">
-        Terapkan model versi spesifik
-      </button>
+    <!-- Tombol Terapkan (di tengah halaman) -->
+      <div class="flex justify-center mt-8">
+        <button class="bg-[#0F172A] text-white text-sm px-6 py-2 rounded-full hover:bg-[#1E293B] transition text-center">
+          Terapkan Model Spesifik
+        </button>
+      </div>
+
     </div>
   </main>
 
