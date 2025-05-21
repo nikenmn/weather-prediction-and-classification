@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, Response, send_file, redirect, url_for, flash
-import joblib
 from database_models import db, WeatherData, WeatherCombined, ModelRegression, ModelClassification, ForecastResults, TrainingLog, ModelHistory
 from datetime import datetime
 import pytz
@@ -12,7 +11,10 @@ from reportlab.pdfgen import canvas
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import os
+import joblib
+from pathlib import Path
 import locale
+from train_utills import preprocess_weather_data, label_classification_data, train_models_with_folder, generate_7day_prediction
 
 
 
@@ -22,16 +24,6 @@ try:
 except:
     pass  # Amanin kalau locale gak tersedia
 
-
-
-# Load model KNN untuk klasifikasi
-# model_knn = joblib.load('model/knn_model.pkl')
-
-def klasifikasi_cuaca(RH, TAVG, RR, SS):
-    # Ini logika dummy: klasifikasi = 'Baik' kalau semua parameter di range ideal
-    if 65 <= RH <= 85 and 25 <= TAVG <= 30 and 3 <= RR <= 8 and 4 <= SS <= 8:
-        return 'Baik'
-    return 'Buruk'
 
 
 
@@ -54,67 +46,26 @@ def get_model_folder_path():
     return model_aktif.folder_path if model_aktif else None
 
 
+@app.route('/test-db')
+def test_db():
+    try:
+        count = WeatherData.query.count()
+        return f"DB Connected! WeatherData rows: {count}"
+    except Exception as e:
+        return f"DB Connection error: {str(e)}"
 
 
 @app.route('/')
 def index():
-    start_date = datetime.today()
+    cuaca_harian = generate_7day_prediction()
+    cuaca_hari_ini = cuaca_harian[0] if cuaca_harian else {}
 
-    hari_dict = {
-        0: "Senin", 1: "Selasa", 2: "Rabu", 3: "Kamis",
-        4: "Jumat", 5: "Sabtu", 6: "Minggu"
-    }
-
-    cuaca_harian = []
-
-    for i in range(7):
-        tanggal = start_date + timedelta(days=i)
-        hari = hari_dict[tanggal.weekday()]
-        RH = 75 + i
-        TAVG = round(27 + i * 0.3, 1)
-        RR = 5 + i % 4
-        SS = 7 - i % 3
-
-        penjelasan = penjelas_parameter(RH, TAVG, RR, SS)
-        klasifikasi = 'Baik' if all("terlalu" not in p for p in penjelasan) else 'Buruk'
-
-        cuaca_harian.append({
-            'hari': hari,
-            'tanggal': tanggal.strftime("%d/%m"),
-            'TAVG': TAVG,
-            'RH': RH,
-            'RR': RR,
-            'SS': SS,
-            'klasifikasi': klasifikasi,
-            'penjelasan': penjelasan,
-            'icon': 'goodclassicon.png' if klasifikasi == 'Baik' else 'badclassicon.png',
-            'is_rh_warning': RH < 65 or RH > 85,
-            'is_tavg_warning': TAVG < 25 or TAVG > 30,
-            'is_rr_warning': RR < 3 or RR > 8,
-            'is_ss_warning': SS < 4 or SS > 8,
-        })
-
-    
-    for d in cuaca_harian:
-        try:
-            if isinstance(d['tanggal'], datetime):
-                d['tanggal'] = d['tanggal'].strftime('%d-%m-%Y')
-            elif isinstance(d['tanggal'], str) and '-' in d['tanggal']:
-                d['tanggal'] = datetime.strptime(d['tanggal'], '%Y-%m-%d').strftime('%d-%m-%Y')
-        except:
-            pass
-
-    cuaca_hari_ini = cuaca_harian[0]
-    
-    
     return render_template(
         'index.html',
-        current_page='index',
         cuaca_hari_ini=cuaca_hari_ini,
-        cuaca_harian=cuaca_harian
+        cuaca_harian=cuaca_harian,
+        current_page='index'
     )
-
-
 
 
 
@@ -213,8 +164,6 @@ def proses_upload_csv():
         print(f"🔥 ERROR saat upload: {e}")
         flash(f'Terjadi kesalahan saat membaca file: {str(e)}')
         return redirect(url_for('upload_csv'))
-
-
 
 
 
@@ -379,89 +328,38 @@ def penjelas_parameter(RH, TAVG, RR, SS):
 
     return penjelasan
 
+# Fungsi dapatkan folder model aktif dari DB
 def get_model_folder_path():
     model_aktif = ModelHistory.query.filter_by(is_active=True).first()
-    if model_aktif:
-        return model_aktif.folder_path
-    return None
+    return model_aktif.folder_path if model_aktif else None
 
-
-
-
-from sklearn.preprocessing import StandardScaler  # Jika perlu scaling
-
-def generate_7day_prediction():
-    from pathlib import Path
-    import joblib
-
+# Fungsi load semua model dari folder aktif
+def load_models_from_active_folder():
     folder = get_model_folder_path()
     if not folder:
-        return []
-
+        return None
+    
     folder_path = Path(folder)
     try:
-        model_files = {
+        models = {
             'tavg': joblib.load(folder_path / 'temperature_model.pkl'),
             'rh_avg': joblib.load(folder_path / 'humidity_model.pkl'),
             'rr': joblib.load(folder_path / 'rainfall_model.pkl'),
             'ss': joblib.load(folder_path / 'sunshine_model.pkl'),
-            'classifier': joblib.load(folder_path / 'knn_classifier.pkl'),
+            'classifier': joblib.load(folder_path / 'knn_classifier.pkl')
         }
+        return models
     except Exception as e:
-        print(f"Error loading model: {e}")
-        return []
+        print(f"Error loading models: {e}")
+        return None
 
-    today = datetime.now()
-    hasil = []
 
-    for i in range(7):
-        tanggal = today + timedelta(days=i)
-        day_of_year = tanggal.timetuple().tm_yday
-        year = tanggal.year
-        fitur = [[day_of_year, year]]
-
-        pred_tavg = model_files['tavg'].predict(fitur)[0]
-        pred_rh = model_files['rh_avg'].predict(fitur)[0]
-        pred_rr = model_files['rr'].predict(fitur)[0]
-        pred_ss = model_files['ss'].predict(fitur)[0]
-
-        # Klasifikasi
-        fitur_klasifikasi = [[pred_tavg, pred_rh, pred_rr, pred_ss]]
-        label = model_files['classifier'].predict(fitur_klasifikasi)[0]
-        klasifikasi = 'Baik' if label == 1 else 'Buruk'
-
-        penjelasan = penjelas_parameter(pred_rh, pred_tavg, pred_rr, pred_ss)
-
-        hasil.append({
-            'hari': tanggal.strftime('%A'),
-            'tanggal': tanggal.strftime('%d-%m-%Y'),
-            'TAVG': round(pred_tavg, 1),
-            'RH': round(pred_rh, 1),
-            'RR': round(pred_rr, 1),
-            'SS': round(pred_ss, 1),
-            'klasifikasi': klasifikasi,
-            'penjelasan': penjelasan,
-            'icon': 'goodclassicon.png' if klasifikasi == 'Baik' else 'badclassicon.png',
-            'is_rh_warning': pred_rh < 65 or pred_rh > 85,
-            'is_tavg_warning': pred_tavg < 25 or pred_tavg > 30,
-            'is_rr_warning': pred_rr < 3 or pred_rr > 8,
-            'is_ss_warning': pred_ss < 4 or pred_ss > 8,
-        })
-
-    return hasil
 
 
 
 @app.route('/lihat-cuaca')
 def lihat_kondisi_cuaca():
-    cuaca_harian = generate_7day_prediction()
-    try:
-        if isinstance(d['tanggal'], datetime):
-            d['tanggal'] = d['tanggal'].strftime('%d-%m-%Y')
-        elif isinstance(d['tanggal'], str) and '-' in d['tanggal']:
-            d['tanggal'] = datetime.strptime(d['tanggal'], '%Y-%m-%d').strftime('%d-%m-%Y')
-    except:
-        pass
+    cuaca_harian = generate_7day_prediction()  
     return render_template('lihatCuaca.html', cuaca_harian=cuaca_harian, current_page='prediksi')
 
 
@@ -487,35 +385,57 @@ def latih_model():
 
 
 
+# Endpoint untuk latih model baru, buat folder versi baru: v1, v2, v3, ...
 @app.route('/train_model', methods=['POST'])
 def train_model():
-    from train_utils import preprocess_weather_data, label_classification_data, train_models
-
-    # Bobot Copeland/WSM — pastikan ini sesuai Copeland score final
     weights = {
         'rh_avg': 0.4,
         'tavg': 0.3,
         'rr': 0.2,
         'ss': 0.1
     }
-
-    # 1. Jalankan preprocessing data dari tabel weather_data_raw → weather_data_cleaned
     df = preprocess_weather_data()
     if df.empty:
-        flash("❌ Data kosong atau gagal preprocessing.", "danger")
+        flash("Data kosong atau gagal preprocessing.", "danger")
         return redirect(url_for('latih_model'))
 
-    # 2. Tambahkan label klasifikasi berdasarkan WSM
     df = label_classification_data(df, weights)
 
-    # 3. Latih model dan simpan ke folder
-    folder_path = train_models(df)
-
-    if folder_path:
-        flash("✅ Model baru berhasil dilatih dan diterapkan!", "success")
+    # Hitung versi terbaru berdasar isi folder models/
+    base_model_dir = Path('models')
+    existing_versions = [d.name for d in base_model_dir.iterdir() if d.is_dir() and d.name.startswith('v')]
+    if existing_versions:
+        # Ambil nomor versi tertinggi, tambah 1
+        latest_version_num = max(int(v[1:]) for v in existing_versions)
+        new_version_num = latest_version_num + 1
     else:
-        flash("❌ Training gagal, model tidak diterapkan.", "danger")
+        new_version_num = 1
 
+    new_folder_name = f'v{new_version_num}'
+    folder_path = base_model_dir / new_folder_name
+    os.makedirs(folder_path, exist_ok=True)
+
+    # Latih dan simpan model ke folder baru ini (gunakan fungsi train_models versi modif)
+    try:
+        # Misal, fungsi train_models disesuaikan menerima folder output
+        from train_utills import train_models_with_folder
+        train_models_with_folder(df, folder_path)
+    except Exception as e:
+        flash(f"Training gagal: {e}", "danger")
+        return redirect(url_for('latih_model'))
+
+    # Update DB ModelHistory
+    ModelHistory.query.update({ModelHistory.is_active: False})  # Nonaktifkan semua versi
+    new_model = ModelHistory(
+        folder_path=str(folder_path),
+        data_cutoff=df['date'].max().date(),
+        training_date=datetime.now().date(),
+        is_active=True
+    )
+    db.session.add(new_model)
+    db.session.commit()
+
+    flash(f"Model baru berhasil dilatih dan diterapkan di folder {new_folder_name}!", "success")
     return redirect(url_for('latih_model'))
 
 

@@ -94,11 +94,11 @@
     <main class="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 pt-36 pb-20">
       <!-- Judul & Tombol -->
       <section class="text-center max-w-3xl mx-auto mb-12">
-        <h1 class="text-white font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight drop-shadow-lg">
+        <h1 class="text-white font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
           Kondisi Cuaca Terkini<br />untuk Perawatan Jeruk Optimal
         </h1>
         <button onclick="document.getElementById('cuaca7hari').scrollIntoView({ behavior: 'smooth' })"
-                class="mt-6 bg-[#112A3E] text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#334155] transition">
+                class="mt-6 bg-[#112A3E] text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#334155] transition drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
           Lihat Kondisi Cuaca 7 Hari
         </button>
       </section>
@@ -232,8 +232,8 @@
 
 
 <!-- SECTION PUTIH ACUAN -->
-<div class="relative bg-white w-full pt-32 mt-32 ">
-  <section class="w-full bg-white pt-20 pb-14 px-6 sm:px-12 lg:px-20 max-w-6xl mx-auto rounded-b-[60px] rounded-t-[60px] shadow-md">
+<div class="bg-white w-full pt-8 mt-8 mb-12">
+  <section class="w-full bg-white pt-2 pb-14 px-6 sm:px-12 lg:px-20 max-w-6xl mx-auto rounded-b-[60px] rounded-t-[60px] shadow-md">
     <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-12 border-b border-gray-300 pb-2">
       Acuan Standarisasi Kondisi Cuaca Ideal untuk Buah Jeruk
     </h2>
@@ -282,11 +282,16 @@
 
 
 <!-- Mulai dari bagian dropdown cuaca 7 hari -->
-<!-- <section id="cuaca7hari" class="bg-white rounded-t-[60px] pt-12 mt-20 pb-20 relative z-10 shadow-inner"> -->
-<section id="cuaca7hari" class="relative mt-40 py-20 bg-cover bg-center bg-no-repeat" style="background-image: url('/static/img/bg-jeruk.png');">
-  <div class="relative z-10 bg-white rounded-[60px] shadow-xl max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 py-10">
+<!--<section style="height: 500px; background: red;">TEST</section> -->
 
-    <h2 class="text-center text-2xl sm:text-3xl font-semibold italic text-gray-900 mb-8 border-b border-gray-300 pb-6">
+{% set bg_jeruk = url_for('static', filename='img/landingpagebg.png') %}
+
+<section id="cuaca7hari"
+         class="relative mt-20 py-20 bg-cover bg-no-repeat bg-fixed bg-center"
+         style="background-image: url('{{ bg_jeruk }}');">
+  <div class="absolute inset-0 bg-gray-700/20 z-0"></div>
+  <div class="relative z-10 bg-white/90 rounded-[60px] shadow-xl max-w-6xl mx-auto px-6 py-10">
+    <h2 class="text-center text-2xl sm:text-3xl font-semibold italic text-gray-900 mb-8 border-b border-gray-300 pb-4">
       Kondisi Cuaca 7 Hari
     </h2>
 
@@ -439,10 +444,10 @@
     <!-- TOMBOL UNDUH -->
     <div class="text-center mt-12 space-y-2">
       <p class="text-sm text-gray-600">Ingin menyimpan data cuaca untuk referensi Anda?</p>
-      <a href="{{ url_for('unduh_cuaca_pdf') }}" class="inline-flex items-center gap-2 bg-[#0F172A] text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#1E293B] transition">
+      <a href="{{ url_for('unduh_cuaca_pdf') }}"
+         class="inline-flex items-center gap-2 bg-[#0F172A] text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#1E293B] transition">
         <i class="fas fa-file-pdf text-red-400"></i> Unduh PDF Cuaca Harian
       </a>
-      
     </div>
   </div>
 </section>
