@@ -10,21 +10,21 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
-import os
 import joblib
 from pathlib import Path
 from train_utills import preprocess_weather_data, penjelas_parameter
 from sqlalchemy import func
-
-
-
+import os
+from datetime import datetime, timedelta
+from pathlib import Path
+import joblib
+from database_models import WeatherCombined
 
 
 try:
     locale.setlocale(locale.LC_TIME, 'ind')  
 except:
     pass  # Amanin kalau locale gak tersedia
-
 
 
 
@@ -67,14 +67,6 @@ def safe_load_model(path):
     
 
 def generate_7day_prediction():
-    import pandas as pd
-    import numpy as np
-    import os
-    from datetime import datetime, timedelta
-    from pathlib import Path
-    import joblib
-    from database_models import WeatherCombined
-
     folder_path = Path(get_model_folder_path())
     if not folder_path.exists():
         print("Folder model tidak ditemukan.")
@@ -265,8 +257,8 @@ def generate_7day_prediction():
             'icon': 'goodclassicon.png' if klasifikasi == 'Baik' else 'badclassicon.png',
             'is_rh_warning': pred_rh < 65 or pred_rh > 85,
             'is_tavg_warning': pred_tavg < 25 or pred_tavg > 30,
-            'is_rr_warning': pred_rr < 3 or pred_rr > 8,
-            'is_ss_warning': pred_ss < 4 or pred_ss > 8,
+            'is_rr_warning': pred_rr < 2.6 or pred_rr > 8,
+            'is_ss_warning': pred_ss < 6 or pred_ss > 8,
         })
 
         df.loc[len(df)] = {
@@ -299,7 +291,18 @@ def index():
             cuaca_hari_ini['SS']
         )
 
-    return render_template("index.html", cuaca_hari_ini=cuaca_hari_ini, cuaca_harian=hasil)
+    # Ambil info data terakhir untuk info prediksi
+    last_date = db.session.query(func.max(WeatherData.date)).scalar()
+    info_gap = {'akhir': last_date.strftime('%d-%m-%Y')} if last_date else None
+
+    return render_template(
+        "index.html",
+        cuaca_hari_ini=cuaca_hari_ini,
+        cuaca_harian=hasil,
+        info_gap=info_gap,
+        current_page='index'
+    )
+
 
 
 
@@ -320,13 +323,12 @@ def input_data():
     else:
         info_gap = None
 
+
     return render_template('input.html', current_page='input', last_date=last_date, info_gap=info_gap)
 
 
 @app.route('/proses_input', methods=['POST'])
 def proses_input():
-    from sqlalchemy import func
-
     last_date = db.session.query(func.max(WeatherData.date)).scalar()
     today = datetime.now().date()
 
@@ -359,14 +361,51 @@ def proses_input():
         ss=float(request.form['SS']),
     )
 
+    last_date = db.session.query(func.max(WeatherData.date)).scalar()
+
+    if last_date:
+        expected_next_date = last_date + timedelta(days=1)
+        if tanggal > expected_next_date:
+            flash(f'Data tidak boleh langsung loncat ke {tanggal.strftime("%d-%m-%Y")}. Harap lengkapi data mulai dari {expected_next_date.strftime("%d-%m-%Y")}.', 'warning')
+            return render_template('input.html', current_page='input')
+
     db.session.add(data)
     db.session.commit()
+
+    from train_utills import (
+        preprocess_weather_data,
+        label_classification_data,
+        train_models_with_folder
+    )
+
+    # Training ulang otomatis setelah input manual
+    weights = {'RH_AVG': 0.4, 'TAVG': 0.3, 'RR': 0.2, 'SS': 0.1}
+    df_train = preprocess_weather_data()
+    df_train = df_train.rename(columns={
+        'tavg': 'TAVG',
+        'rh_avg': 'RH_AVG',
+        'rr': 'RR',
+        'ss': 'SS'
+    })
+    df_train = label_classification_data(df_train, weights)
+    df_train = df_train.rename(columns={
+        'TAVG': 'tavg',
+        'RH_AVG': 'rh_avg',
+        'RR': 'rr',
+        'SS': 'ss'
+    })
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    folder_path = f'models/model_{timestamp}'
+    train_models_with_folder(df_train, folder_path)
+
+    flash("Model berhasil dilatih ulang setelah penambahan data.", "info")
+
     return render_template('input.html', sukses=True, current_page='input', last_date=last_date, info_gap=info_gap)
 
 
 @app.route('/unggah-csv', methods=['GET'])
 def upload_csv():
-    from sqlalchemy import func
+    sukses = request.args.get('sukses') == '1'
 
     last_date = db.session.query(func.max(WeatherData.date)).scalar()
     today = datetime.now().date()
@@ -381,13 +420,11 @@ def upload_csv():
     else:
         info_gap = None
 
-    return render_template("upload.html", sukses=False, current_page='upload', last_date=last_date, info_gap=info_gap)
+    return render_template("upload.html", sukses=sukses, current_page='upload', last_date=last_date, info_gap=info_gap)
 
 
-@app.route('/proses_upload_csv', methods=['POST'])
+@app.route('/unggah-csv', methods=['POST'])
 def proses_upload_csv():
-    from sqlalchemy import func
-
     last_date = db.session.query(func.max(WeatherData.date)).scalar()
     today = datetime.now().date()
 
@@ -415,29 +452,36 @@ def proses_upload_csv():
         return redirect(url_for('upload_csv'))
 
     try:
-        import pandas as pd
         df = pd.read_csv(file)
         df.rename(columns={'TANGGAL': 'Tanggal', 'RH_AVG': 'RH'}, inplace=True)
+
+        # Validasi loncatan tanggal
+        last_date = db.session.query(func.max(WeatherData.date)).scalar()
+        first_csv_date = df['Tanggal'].min().date()
+        if last_date:
+            expected_next_date = last_date + timedelta(days=1)
+            if first_csv_date > expected_next_date:
+                flash(f'Data tidak boleh langsung loncat ke {first_csv_date.strftime("%d-%m-%Y")}. Harap lengkapi data mulai dari {expected_next_date.strftime("%d-%m-%Y")}.', 'warning')
+                return redirect(url_for('upload_csv'))
 
         df['Tanggal'] = pd.to_datetime(df['Tanggal'], dayfirst=True, errors='coerce')
         df = df.dropna(subset=['Tanggal'])
         df = df.sort_values(by='Tanggal')
 
-        # Cek data kosong
         if df[['Tanggal', 'RH', 'TAVG', 'RR', 'SS']].isnull().any().any():
-            return render_template("upload.html", error_kosong=True, last_date=last_date, info_gap=info_gap, current_page='upload')
+            flash("Terdapat data kosong dalam file CSV Anda.", "warning")
+            return redirect(url_for('upload_csv'))
 
-        # Cek tanggal tidak urut
         if not df['Tanggal'].is_monotonic_increasing:
-            return render_template("upload.html", error_tanggal=True, last_date=last_date, info_gap=info_gap, current_page='upload')
+            flash("Tanggal tidak urut di file CSV Anda.", "warning")
+            return redirect(url_for('upload_csv'))
 
-        # Cek duplikat tanggal
         existing_dates = {row.date for row in WeatherData.query.with_entities(WeatherData.date).all()}
         df = df[~df['Tanggal'].dt.date.isin(existing_dates)]
 
         if df.empty:
             flash("Semua tanggal pada file sudah ada di database. Tidak ada data baru ditambahkan.", "warning")
-            return render_template("upload.html", sukses=False, last_date=last_date, info_gap=info_gap, current_page='upload')
+            return redirect(url_for('upload_csv'))
 
         for _, row in df.iterrows():
             data_raw = WeatherData(
@@ -450,21 +494,27 @@ def proses_upload_csv():
             db.session.add(data_raw)
         db.session.commit()
 
-        from train_utills import preprocess_weather_data
+        from train_utills import preprocess_weather_data, label_classification_data, train_models_with_folder
         df_cleaned = preprocess_weather_data()
-        print(f"Preprocessing selesai: {len(df_cleaned)} baris masuk ke weather_data_cleaned")
+        df_cleaned = df_cleaned.rename(columns={'tavg': 'TAVG', 'rh_avg': 'RH_AVG', 'rr': 'RR', 'ss': 'SS'})
+        df_cleaned = label_classification_data(df_cleaned, weights={'RH_AVG': 0.4, 'TAVG': 0.3, 'RR': 0.2, 'SS': 0.1})
+        df_cleaned = df_cleaned.rename(columns={'TAVG': 'tavg', 'RH_AVG': 'rh_avg', 'RR': 'rr', 'SS': 'ss'})
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        folder_path = f'models/model_{timestamp}'
+        train_models_with_folder(df_cleaned, folder_path)
 
-        return render_template("upload.html", sukses=True, last_date=last_date, info_gap=info_gap, current_page='upload')
+        flash("Model berhasil dilatih ulang setelah penambahan data.", "info")
+        return redirect(url_for('upload_csv', sukses=1))
 
     except Exception as e:
         print(f"ERROR saat upload: {e}")
-        flash(f'Terjadi kesalahan saat membaca file: {str(e)}')
+        flash(f'Terjadi kesalahan saat membaca file: {str(e)}', 'danger')
         return redirect(url_for('upload_csv'))
+
 
 
 @app.context_processor
 def inject_duplikat_check():
-    from sqlalchemy import func
     existing_dates = {row.date for row in WeatherData.query.with_entities(WeatherData.date).all()}
     return dict(existing_dates=existing_dates)
 
@@ -607,8 +657,6 @@ def lihat_kondisi_cuaca():
 # HALAMAN LATIH MODEL 
 @app.route('/latih-model')
 def latih_model():
-    from sqlalchemy import func
-
     # Ambil tanggal terakhir dari weather_data_raw
     last_date = db.session.query(func.max(WeatherData.date)).scalar()
     tanggal_terakhir = last_date.strftime('%d-%m-%Y') if last_date else 'Belum ada data'

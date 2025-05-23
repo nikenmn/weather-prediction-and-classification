@@ -53,7 +53,7 @@
                       Unduh Kondisi Cuaca
                     </a>
                     <a href="{{ url_for('latih_model') }}" class="px-4 py-2 rounded-full rounded-full transition {{ 'bg-gray-600' if current_page == 'latih_model' else 'hover:bg-gray-600' }}">
-                      Latih Model
+                      Pelatihan Model
                     </a>
           </nav>
           
@@ -96,9 +96,17 @@
     <div class="bg-white rounded-lg max-w-5xl mx-auto flex flex-col sm:flex-row p-6 sm:p-10 shadow-xl">
       
       <!-- Left: Illustration -->
-      <div class="w-full sm:w-1/2 bg-[#0F172A] rounded-lg flex items-center justify-center p-6">
-        <img src="{{ url_for('static', filename='img/color-logo.png') }}" alt="Weather Icon" class="w-40 h-auto" />
+      <div class="w-full sm:w-1/2 bg-[#0F172A] rounded-lg flex flex-col items-center justify-center p-6">
+        <img src="{{ url_for('static', filename='img/color-logo.png') }}" alt="Weather Icon" class="w-40 h-auto mb-4" />
+          {% if current_page == 'upload' and info_gap is defined and info_gap %}
+          <div class="mt-2 text-sm text-yellow-100 bg-yellow-600/20 border border-yellow-300 px-3 py-2 rounded-lg text-center max-w-xs">
+            <strong class="block mb-1">📌 Informasi:</strong>
+            Untuk mendapatkan prediksi cuaca hari ini, Anda perlu melengkapi data mulai dari <strong>{{ info_gap.mulai }}</strong> hingga <strong>{{ info_gap.akhir }}</strong> (<strong>{{ info_gap.jumlah }}</strong> hari).
+          </div>
+          {% endif %}
       </div>
+
+
 
       <!-- Right: Form Upload -->
       <div class="sm:w-1/2 p-8 space-y-6">
@@ -141,51 +149,16 @@
   </main>
 
 <!-- Flash untuk error -->
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <div class="max-w-2xl mx-auto mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
-      {% for message in messages %}
-        <p>{{ message }}</p>
-      {% endfor %}
-    </div>
-  {% endif %}
-{% endwith %}
-
-{% if sukses is defined and sukses %}
-<script>
-Swal.fire({
-  title: '<strong>File berhasil diproses dan disimpan.</strong>',
-  imageUrl: "{{ url_for('static', filename='img/icons/thumbsup.png') }}",
-  imageWidth: 120,
-  imageHeight: 120,
-  imageAlt: 'Ikon Sukses',
-  confirmButtonText: 'Lanjut'
-}).then(() => {
-  Swal.fire({
-    title: '📢 Perhatian!',
-    text: 'Jangan lupa klik Latih Model agar hasil prediksi kamu akurat.',
-    icon: 'info',
-    confirmButtonText: 'Latih Sekarang',
-    showCancelButton: true,
-    cancelButtonText: 'Nanti Saja'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      window.location.href = "{{ url_for('latih_model') }}";
-    } else {
-      window.location.href = "{{ url_for('upload_csv') }}";
-    }
-  });
-});
-</script>
-{% endif %}
+{% set title_kosong = 'Upload Gagal' if current_page == 'upload' else 'Input Gagal' %}
+{% set text_kosong = 'Terdapat data yang kosong di file CSV Anda.' if current_page == 'upload' else 'Terdapat kolom yang kosong. Harap isi semua data dengan lengkap.' %}
 
 {% if error_kosong is defined and error_kosong %}
 <script>
 Swal.fire({
   icon: 'error',
-  title: 'Upload Gagal',
-  text: 'Terdapat data yang kosong di file CSV Anda.',
-  confirmButtonText: 'Perbaiki File'
+  title: "{{ title_kosong }}",
+  text: "{{ text_kosong }}",
+  confirmButtonText: 'Kembali'
 });
 </script>
 {% endif %}
@@ -200,6 +173,62 @@ Swal.fire({
 });
 </script>
 {% endif %}
+
+{% if current_page == 'upload' and not sukses and messages|length == 0 and info_gap is defined and info_gap %}
+<script>
+Swal.fire({
+  icon: 'info',
+  title: 'Data belum lengkap',
+  html: 'Semua tanggal pada file sudah ada di database.<br>Untuk mendapatkan prediksi cuaca hari ini, silakan isi data mulai dari <strong>{{ info_gap.mulai }}</strong> hingga <strong>{{ info_gap.akhir }}</strong> (<strong>{{ info_gap.jumlah }}</strong> hari).',
+  confirmButtonText: 'Oke'
+});
+</script>
+{% endif %}
+
+{% if current_page == 'upload' and sukses is defined and sukses and info_gap is defined and info_gap %}
+<script>
+Swal.fire({
+  icon: 'info',
+  title: 'Data Tersimpan',
+  html: 'Untuk mendapatkan prediksi cuaca hari ini, Anda masih perlu menambahkan data mulai dari <strong>{{ info_gap.mulai }}</strong> hingga <strong>{{ info_gap.akhir }}</strong> (<strong>{{ info_gap.jumlah }}</strong> hari).',
+  confirmButtonText: 'Oke'
+});
+</script>
+{% endif %}
+
+{% if sukses is defined and sukses %}
+<script>
+Swal.fire({
+  title: '<strong>Data berhasil ditambahkan!</strong>',
+  text: 'Model telah otomatis dilatih ulang dan diterapkan.',
+  icon: 'success',
+  imageUrl: "{{ url_for('static', filename='img/icons/thumbsup.png') }}",
+  imageWidth: 120,
+  imageHeight: 120,
+  imageAlt: 'Ikon Sukses',
+  confirmButtonText: 'Lanjut'
+});
+</script>
+{% endif %}
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, msg in messages %}
+    <script>
+      Swal.fire({
+        icon: '{{ "warning" if category == "warning" else ("error" if category == "danger" else "info") }}',
+        title: '{{ msg }}',
+        confirmButtonText: 'Oke'
+      });
+    </script>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+
+
+
+
 
 
   <!-- Footer -->

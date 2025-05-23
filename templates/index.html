@@ -49,7 +49,7 @@
                       Unduh Kondisi Cuaca
                     </a>
                     <a href="{{ url_for('latih_model') }}" class="px-4 py-2 rounded-full rounded-full transition hover:bg-gray-600">
-                      Latih Model
+                      Pelatihan Model
                     </a>
           </nav>
           
@@ -88,18 +88,24 @@
 
 
   <!-- main content -->
-  <div class="relative bg-[url('/static/img/landingpagebg.png')] bg-cover bg-center bg-no-repeat">
+  <div class="relative bg-[url('/static/img/landingpagebg.png')] bg-cover bg-center drop-shadow-lg bg-no-repeat">
     <div class="absolute inset-0 bg-black/40"></div> 
 
     <main class="relative z-10 w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 pt-36 pb-20">
 
       <!-- Judul & Tombol -->
-      <section class="text-center max-w-3xl mx-auto mb-12">
-        <h1 class="text-white font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
+      <section class="text-center max-w-3xl mx-auto mb-8">
+        <h2 class="text-white font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
           Kondisi Cuaca Terkini<br />untuk Perawatan Jeruk Optimal
-        </h1>
+        </h2>
+        {% if current_page == 'index' and info_gap is defined and info_gap %}
+          <p class="text-white text-base italic font-semibold mt-4 drop-shadow-lg">
+            Prediksi cuaca hari ini dibuat berdasarkan data terakhir yaitu <span class="underline underline-offset-2 text-yellow-300">{{ info_gap.akhir }}</span>.
+            Masukkan data terbaru untuk mendapatkan hasil yang lebih baik.
+          </p>
+        {% endif %}
         <button onclick="document.getElementById('cuaca7hari').scrollIntoView({ behavior: 'smooth' })"
-                class="mt-6 bg-[#112A3E] text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#334155] transition drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
+                class="mt-4 bg-[#112A3E] text-white font-semibold text-sm px-6 py-3 rounded-full hover:bg-[#334155] transition drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
           Lihat Kondisi Cuaca 7 Hari
         </button>
       </section>

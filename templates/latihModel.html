@@ -26,7 +26,7 @@
           <a href="{{ url_for('input_data') }}" class="px-4 py-2 rounded-full transition hover:bg-gray-600">Masukkan Data Cuaca</a>
           <a href="{{ url_for('prediksi') }}#cuaca7hari" class="px-4 py-2 rounded-full transition hover:bg-gray-600">Lihat Kondisi Cuaca</a>
           <a href="{{ url_for('unduh') }}" class="px-4 py-2 rounded-full transition hover:bg-gray-600">Unduh Kondisi Cuaca</a>
-          <a href="{{ url_for('latih_model') }}" class="px-4 py-2 rounded-full bg-gray-600">Latih Model</a>
+          <a href="{{ url_for('latih_model') }}" class="px-4 py-2 rounded-full bg-gray-600">Pelatihan Model</a>
         </nav>
         <a href="{{ url_for('index') }}" class="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-20 hover:bg-opacity-30 transition">
           <i class="fas fa-home text-white text-lg"></i>
@@ -59,7 +59,6 @@
             <th class="px-4 py-3">Tanggal Data Terakhir</th>
             <th class="px-4 py-3">Tanggal Latih Model</th>
             <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3">Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -75,14 +74,6 @@
               {% else %}
                 <span class="inline-block px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded-full">Tidak Aktif</span>
               {% endif %}
-            </td>
-            <td class="px-4 py-2 text-center">
-              <form method="POST" action="{{ url_for('terapkan_model') }}">
-                <input type="hidden" name="model_id" value="{{ model.id }}">
-                <button type="submit" class="bg-[#0F172A] text-white text-sm px-3 py-1 rounded hover:bg-[#1E293B] transition">
-                  Terapkan
-                </button>
-              </form>
             </td>
           </tr>
           {% endfor %}
