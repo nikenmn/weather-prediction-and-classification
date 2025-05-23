@@ -89,9 +89,10 @@
 
   <!-- main content -->
   <div class="relative bg-[url('/static/img/landingpagebg.png')] bg-cover bg-center bg-no-repeat">
-    <div class="absolute inset-0 bg-black/40"></div> <!-- optional dark overlay -->
+    <div class="absolute inset-0 bg-black/40"></div> 
 
-    <main class="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 pt-36 pb-20">
+    <main class="relative z-10 w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 pt-36 pb-20">
+
       <!-- Judul & Tombol -->
       <section class="text-center max-w-3xl mx-auto mb-12">
         <h1 class="text-white font-extrabold text-3xl sm:text-4xl lg:text-5xl leading-tight drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]">
@@ -106,9 +107,10 @@
 
 
       <!-- WEATHER PREDICTION CARD (HARI INI) -->
-    <section class="bg-white rounded-lg max-w-5xl mx-auto 
-    flex flex-col sm:flex-row justify-between items-start p-6 sm:p-8 
-    space-y-6 sm:space-y-0 sm:gap-x-12 shadow-xl">
+      <section class="bg-white rounded-lg w-full max-w-7xl mx-auto 
+      flex flex-col sm:flex-row justify-between items-start p-6 sm:p-8 
+      space-y-6 sm:space-y-0 sm:gap-x-8 shadow-xl">
+
 
       <!-- LEFT: Hari & Tanggal -->
       <div class="flex flex-col items-start self-start w-full sm:w-auto gap-1">
@@ -121,21 +123,20 @@
             class="w-[280px] h-[124px] drop-shadow mt-2" />
       </div>
 
+      
       <!-- MIDDLE: Parameter Cuaca -->
-      <div class="flex flex-col space-y-4 text-sm sm:text-base text-gray-800 w-full sm:w-[50%]">
+      <div class="flex flex-col space-y-4 text-sm sm:text-base text-gray-800 w-full sm:w-[45%]">
         <!-- RH -->
         <div class="flex items-center justify-between border-b pb-2">
           <div class="flex items-center">
             <img src="{{ url_for('static', filename='img/icons/rh-icon.png') }}" class="w-12 h-8 mr-2" />
             <span>Kelembapan Udara</span>
           </div>
-          <span class="font-extrabold text-xl text-gray-900">
-            {{ cuaca_hari_ini.RH }} %
-            {% if cuaca_hari_ini.is_rh_warning %}
-              <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2"
-                   viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M12 8v4m0 4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"/>
+          <span class="flex items-center font-extrabold text-xl text-gray-900">
+            {{ cuaca_hari_ini['RH'] }} %
+            {% if cuaca_hari_ini['is_rh_warning'] %}
+              <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
               </svg>
             {% endif %}
           </span>
@@ -148,16 +149,16 @@
             <img src="{{ url_for('static', filename='img/icons/tavg-icon.png') }}" class="w-13 h-8 mr-2" />
             <span>Suhu Udara</span>
           </div>
-          <span class="font-extrabold text-xl text-gray-900">
-            {{ cuaca_hari_ini.TAVG }} °C
-            {% if cuaca_hari_ini.is_tavg_warning %}
-              <svg class="h-5 w-5 text-yellow-500 ml-2" fill="none" stroke="currentColor" stroke-width="2"
-                   viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M12 8v4m0 4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"/>
+          <div class="flex items-center font-extrabold text-xl text-gray-900">
+            <span>{{ cuaca_hari_ini['TAVG'] }} °C</span>
+            {% if cuaca_hari_ini['is_tavg_warning'] %}
+              <svg xmlns="http://www.w3.org/2000/svg"
+                  class="ml-2 w-4 h-4 text-yellow-400 inline-block align-middle"
+                  style="transform: translateY(-1px);" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
               </svg>
             {% endif %}
-          </span>
+          </div>
         </div>
       
         <!-- RR -->
@@ -167,58 +168,66 @@
             <span>Curah Hujan</span>
           </div>
           <span class="font-extrabold text-xl text-gray-900 flex items-center">
-            {{ cuaca_hari_ini.RR }} mm
-            {% if cuaca_hari_ini.is_rr_warning %}
-              <svg class="h-5 w-5 text-yellow-500 ml-2" fill="none" stroke="currentColor" stroke-width="2"
-                   viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M12 8v4m0 4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"/>
-              </svg>
+            {{ cuaca_hari_ini['RR'] }} mm
+            {% if cuaca_hari_ini['is_rr_warning'] %}
+                <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
             {% endif %}
           </span>
         </div>
       
         <!-- SS -->
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
+        <div class="flex items-center justify-between border-b pb-3">
+          <div class="flex items-center min-w-[220px] whitespace-nowrap">
             <img src="{{ url_for('static', filename='img/icons/ss-icon.png') }}" class="w-12 h-8 mr-2" />
-            <span>Lama Penyinaran</span>
+            <span class="text-sm sm:text-base">Lama Penyinaran</span>
           </div>
-          <span class="font-extrabold text-xl text-gray-900">
-            {{ cuaca_hari_ini.SS }} jam
-            {% if cuaca_hari_ini.is_ss_warning %}
-              <svg class="h-5 w-5 text-yellow-500 ml-2" fill="none" stroke="currentColor" stroke-width="2"
-                   viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M12 8v4m0 4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"/>
-              </svg>
+
+          <!-- BAGIAN KANAN: nilai + ikon -->
+          <div class="flex items-center justify-end min-w-[160px]">
+            <span class="font-extrabold text-xl text-gray-900">
+              {{ cuaca_hari_ini['SS'] }} jam
+            </span>
+            {% if cuaca_hari_ini['is_ss_warning'] %}
+                <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
             {% endif %}
-          </span>
+          </div>
         </div>
+
       </div>
 
-      <!-- RIGHT: Klasifikasi -->
-      <div class="flex self-center w-full sm:w-[640px] max-w-[800px] ml-4">
-        <!-- Icon -->
-        <div class="flex-shrink-0 flex justify-center items-center w-[150px] h-[150px]">
-          <img src="{{ url_for('static', filename='img/icons/goodclassicon.png') }}" 
-              class="w-[150px] h-[120px] drop-shadow-md" alt="Kondisi Baik">
-        </div>
+      <div class="flex w-full sm:w-[5%] gap-1 items-center"></div>
 
-        <div class="flex flex-col justify-center items-center text-center w-full">
-          <div class="mb-3">
-            <p class="text-sm font-medium text-gray-500">Kondisi Cuaca</p>
-            <p class="text-2xl font-bold text-{{ 'green' if cuaca_hari_ini.klasifikasi == 'Baik' else 'red' }}-600">
-              {{ cuaca_hari_ini.klasifikasi }}
+      <!-- RIGHT: Klasifikasi -->
+      <div class="flex w-full sm:w-[55%] ml-1 gap-1 items-center">
+        
+        <!-- KIRI: Ikon + Judul -->
+        <div class="flex flex-col items-center w-[200px]">
+          <img src="{{ url_for('static', filename='img/icons/' ~ ('goodclassicon.png' if cuaca_hari_ini['klasifikasi'] == 'Baik' else 'badclassicon.png')) }}" 
+              class="w-[160px] h-[160px] object-contain drop-shadow-md" alt="Kondisi Cuaca">
+          <div class="text-center leading-tight">
+            <p class="text-sm text-gray-500">Kondisi Cuaca</p>
+            <p class="text-lg font-bold text-{{ 'green' if cuaca_hari_ini['klasifikasi'] == 'Baik' else 'red' }}-600">
+              {{ cuaca_hari_ini['klasifikasi'] }}
             </p>
           </div>
-          <ul class="text-sm text-gray-800 space-y-1 w-full max-w-xs mt-4">
-            {% for ket in cuaca_hari_ini.penjelasan %}
+        </div>
+
+        <!-- KANAN: Penjelasan (RATA TENGAH) -->
+        <div class="flex flex-col justify-center text-sm text-gray-800 leading-relaxed w-full max-w-xl text-center">
+          <ul class="space-y-3">
+            {% for ket in cuaca_hari_ini['penjelasan'] %}
               <li class="border-b pb-1">{{ ket }}</li>
             {% endfor %}
           </ul>
         </div>
       </div>
+
+
+
     </section>
  
   </div>
@@ -326,7 +335,7 @@
 
         <!-- RIGHT -->
         <div class="w-[130px] flex justify-between items-center text-sm">
-          <span class="flex items-center gap-1 text-{{ 'green' if data.klasifikasi == 'Baik' else 'red' }}-600 font-semibold whitespace-nowrap">
+          <span class="flex items-center gap-1 text-{{ 'green' if data.klasifikasi == 'Baik' else 'red' }}-600 font-semibold whitespace-nowrap leading-tight">
             <i class="fas fa-{{ 'check-circle' if data.klasifikasi == 'Baik' else 'exclamation-circle' }}"></i>
             {{ data.klasifikasi }}
           </span>
@@ -336,6 +345,7 @@
           </svg>
         </div>
       </button>
+
 
       <!-- DROPDOWN CONTENT -->
       <div class="hidden px-6 py-6 bg-white border-t border-gray-200">
@@ -422,7 +432,7 @@
               <p class="text-xl font-bold text-{{ 'green' if data.klasifikasi == 'Baik' else 'red' }}-600 leading-tight">
                 {{ data.klasifikasi }}
               </p>
-              <p class="text-sm font-medium text-gray-500 -mt-1">Kondisi Cuaca</p>
+              <p class="text-sm font-medium text-gray-500">Kondisi Cuaca</p>
             </div>
 
             <!-- Penjelasan -->
@@ -440,6 +450,7 @@
       </div>
     </div>
     {% endfor %}
+
 
     <!-- TOMBOL UNDUH -->
     <div class="text-center mt-12 space-y-2">

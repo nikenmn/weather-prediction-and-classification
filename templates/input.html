@@ -162,22 +162,57 @@
     </div>
   </section>
   
-  {% if sukses %}
-  <script>
+<!-- Flash untuk error -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="max-w-2xl mx-auto mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+      {% for message in messages %}
+        <p>{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% if sukses is defined and sukses %}
+<script>
+Swal.fire({
+  title: '<strong>File berhasil diproses dan disimpan.</strong>',
+  imageUrl: "{{ url_for('static', filename='img/icons/thumbsup.png') }}",
+  imageWidth: 120,
+  imageHeight: 120,
+  imageAlt: 'Ikon Sukses',
+  confirmButtonText: 'Lanjut'
+}).then(() => {
   Swal.fire({
-    title: '<strong>Data sukses ditambahkan.</strong>',
-    imageUrl: "{{ url_for('static', filename='img/icons/thumbsup.png') }}",  // ganti sesuai nama file gambar kamu
-    imageWidth: 120,
-    imageHeight: 120,
-    imageAlt: 'Ikon Sukses',
-    confirmButtonText: 'Kembali'
+    title: '📢 Perhatian!',
+    text: 'Jangan lupa klik Latih Model agar hasil prediksi kamu akurat.',
+    icon: 'info',
+    confirmButtonText: 'Latih Sekarang',
+    showCancelButton: true,
+    cancelButtonText: 'Nanti Saja'
   }).then((result) => {
     if (result.isConfirmed) {
-      window.location.href = "{{ url_for('input_data') }}";  // redirect
+      window.location.href = "{{ url_for('latih_model') }}";
+    } else {
+      window.location.href = "{{ url_for('input_data') }}";
     }
   });
-  </script>
-  {% endif %}
+});
+</script>
+{% endif %}
+
+{% if error_kosong is defined and error_kosong %}
+<script>
+Swal.fire({
+  icon: 'error',
+  title: 'Input Gagal',
+  text: 'Terdapat kolom yang kosong. Harap isi semua data dengan lengkap.',
+  confirmButtonText: 'Kembali'
+});
+</script>
+{% endif %}
+
+
 </main>
 
 

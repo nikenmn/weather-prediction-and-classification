@@ -140,7 +140,18 @@
     </div>
   </main>
 
-{% if sukses %}
+<!-- Flash untuk error -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="max-w-2xl mx-auto mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+      {% for message in messages %}
+        <p>{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% if sukses is defined and sukses %}
 <script>
 Swal.fire({
   title: '<strong>File berhasil diproses dan disimpan.</strong>',
@@ -148,11 +159,44 @@ Swal.fire({
   imageWidth: 120,
   imageHeight: 120,
   imageAlt: 'Ikon Sukses',
-  confirmButtonText: 'Kembali'
-}).then((result) => {
-  if (result.isConfirmed) {
-    window.location.href = "{{ url_for('proses_upload_csv') }}";
-  }
+  confirmButtonText: 'Lanjut'
+}).then(() => {
+  Swal.fire({
+    title: '📢 Perhatian!',
+    text: 'Jangan lupa klik Latih Model agar hasil prediksi kamu akurat.',
+    icon: 'info',
+    confirmButtonText: 'Latih Sekarang',
+    showCancelButton: true,
+    cancelButtonText: 'Nanti Saja'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      window.location.href = "{{ url_for('latih_model') }}";
+    } else {
+      window.location.href = "{{ url_for('upload_csv') }}";
+    }
+  });
+});
+</script>
+{% endif %}
+
+{% if error_kosong is defined and error_kosong %}
+<script>
+Swal.fire({
+  icon: 'error',
+  title: 'Upload Gagal',
+  text: 'Terdapat data yang kosong di file CSV Anda.',
+  confirmButtonText: 'Perbaiki File'
+});
+</script>
+{% endif %}
+
+{% if error_tanggal is defined and error_tanggal %}
+<script>
+Swal.fire({
+  icon: 'error',
+  title: 'Upload Gagal',
+  text: 'Tanggal tidak urut di file CSV Anda.',
+  confirmButtonText: 'Perbaiki File'
 });
 </script>
 {% endif %}
